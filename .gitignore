@@ -1,0 +1,13 @@
+node_modules/
+.env
+data/yusr.db
+data/yusr.test.db
+logs/
+*.log
+.DS_Store
+Thumbs.db
+mihwar/
+frontend/dist/
+backend/data/
+frontend/public/Screenshot*.jpg
+frontend/public/logo.png
