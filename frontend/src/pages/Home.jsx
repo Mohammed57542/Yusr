@@ -1,12 +1,16 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client';
-import { Loading, SectionHeader, Stat, Badge, difficultyColor } from '../components/common';
+import { SectionHeader, Stat, Badge, difficultyColor, SkeletonCard, SkeletonHero } from '../components/common';
 
 function Hero() {
   const [grades, setGrades] = useState([]);
-  const [stats, setStats] = useState({});
-  useEffect(() => { api.get('/grades').then(setGrades).catch(() => {}); api.get('/stats').then(setStats).catch(() => {}); }, []);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    api.get('/grades').then(setGrades).catch(() => {}).finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <SkeletonHero />;
 
   return (
     <section className="relative overflow-hidden bg-gradient-to-br from-violet-500 via-violet-700 to-night text-white">
@@ -21,18 +25,18 @@ function Hero() {
             🇴🇲 المنهج العُماني • الصف ٨ حتى ١٢
           </span>
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-black leading-tight mb-6">
-            الطريق الأسهل
-            <span className="block text-transparent bg-clip-text bg-gradient-to-l from-gold-200 to-gold-400">للفهم والنجاح مع يُسر</span>
+            تعلّم بطريقة أسهل
+            <span className="block text-transparent bg-clip-text bg-gradient-to-l from-gold-200 to-gold-400">مع يُسر</span>
           </h1>
           <p className="text-lg text-violet-100 leading-relaxed mb-8 max-w-xl">
-            شروحات مبسطة، ملخصات وملفات، بنك أسئلة، اختبارات، حصص مباشرة، وجروبات مجانية — كل ما تحتاجه للتفوق في مكان واحد.
+            منصة تعليمية لطلاب المدارس في سلطنة عُمان — تجمع الدروس والاختبارات والموارد والحصص ومتابعة التقدم في مكان واحد.
           </p>
           <div className="flex flex-wrap gap-4">
             <Link to="/grades" className="bg-gold-400 text-night font-extrabold px-8 py-4 rounded-2xl shadow-xl shadow-gold-500/25 hover:-translate-y-1 hover:shadow-gold-400/40 transition-all">
-              ابدأ التعلم الآن
+              ابدأ التعلم
             </Link>
-            <Link to="/pricing" className="bg-white/10 border border-white/25 font-bold px-8 py-4 rounded-2xl hover:bg-white/20 transition-all backdrop-blur">
-              اشترك الآن
+            <Link to="/subjects" className="bg-white/10 border border-white/25 font-bold px-8 py-4 rounded-2xl hover:bg-white/20 transition-all backdrop-blur">
+              استكشف المواد
             </Link>
           </div>
           <div className="flex flex-wrap gap-3 mt-10">
@@ -42,11 +46,6 @@ function Hero() {
               </Link>
             ))}
           </div>
-          <div className="flex items-center gap-6 mt-8 text-sm text-violet-100">
-            <div className="flex items-center gap-2"><span className="text-amber-300">🎥</span> حصص مسجلة</div>
-            <div className="flex items-center gap-2"><span className="text-amber-300">📄</span> ملخصات PDF</div>
-            <div className="flex items-center gap-2"><span className="text-amber-300">👨‍🏫</span> معلمون متميزون</div>
-          </div>
         </div>
         <div className="hidden lg:block animate-floaty">
           <div className="relative">
@@ -54,15 +53,17 @@ function Hero() {
               <div className="flex items-center gap-4 mb-6">
                 <div className="w-12 h-12 rounded-2xl bg-gold-400 flex items-center justify-center text-xl">🎯</div>
                 <div>
-                  <p className="font-extrabold">3 خطوات فقط</p>
-                  <p className="text-sm text-violet-200">للوصول إلى التفوق</p>
+                  <p className="font-extrabold">5 خطوات للتفوق</p>
+                  <p className="text-sm text-violet-200">من التسجيل إلى النتائج</p>
                 </div>
               </div>
               <div className="space-y-3">
                 {[
                   { n: '1', t: 'اختر صفّك', d: 'من الصف الثامن حتى الثاني عشر' },
-                  { n: '2', t: 'اختر مادتك', d: 'شاهد الحصص وحمّل الملخصات' },
-                  { n: '3', t: 'اختبر نفسك', d: 'بنك أسئلة واختبارات فورية' },
+                  { n: '2', t: 'اختر مادتك', d: 'تصفح المواد المتاحة لصفك' },
+                  { n: '3', t: 'شاهد الدرس', d: 'دروس مسجلة بجودة عالية' },
+                  { n: '4', t: 'اختبر نفسك', d: 'بنك أسئلة واختبارات فورية' },
+                  { n: '5', t: 'تابع تقدمك', d: 'لوحات تحكم ونتائج لحظية' },
                 ].map((s) => (
                   <div key={s.n} className="bg-white/10 rounded-2xl p-4 flex items-center gap-4">
                     <span className="w-9 h-9 rounded-xl bg-amber-400 text-slate-900 font-black flex items-center justify-center shrink-0">{s.n}</span>
@@ -73,13 +74,6 @@ function Hero() {
                   </div>
                 ))}
               </div>
-              <div className="mt-6 p-4 rounded-2xl bg-amber-400/20 border border-amber-300/30 text-sm">
-                💬 <b>جروب مجاني:</b> انضم إلى جروب صفك على واتساب واحصل على أسئلة ومراجعات يومية مجانية.
-              </div>
-            </div>
-            <div className="absolute -top-6 -left-6 bg-white text-slate-900 rounded-2xl px-5 py-4 shadow-2xl animate-floaty" style={{ animationDelay: '1s' }}>
-              <p className="font-extrabold text-lg">{stats.students ? stats.students.toLocaleString('ar-EG') : '+12,000'}</p>
-              <p className="text-xs text-slate-500 font-medium">طالب متفوق</p>
             </div>
           </div>
         </div>
@@ -89,11 +83,28 @@ function Hero() {
 }
 
 function Stats() {
-  const [stats, setStats] = useState({ grades: '—', subjects: '—', lessons: '—', questions: '—' });
+  const [stats, setStats] = useState(null);
   useEffect(() => { api.get('/stats').then(setStats).catch(() => {}); }, []);
+
+  if (!stats) {
+    return (
+      <section className="max-w-7xl mx-auto px-4 -mt-10 relative z-10">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-white rounded-3xl border border-slate-100 shadow-xl p-6 md:p-8 animate-pulse">
+          {[1,2,3,4].map((i) => (
+            <div key={i} className="text-center space-y-2">
+              <div className="w-10 h-10 bg-slate-200 rounded-xl mx-auto" />
+              <div className="h-8 bg-slate-200 rounded w-16 mx-auto" />
+              <div className="h-4 bg-slate-200 rounded w-24 mx-auto" />
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
   const items = [
-    { icon: '🏫', value: stats.grades, label: 'صفوف دراسية (٨-١٢)' },
-    { icon: '📚', value: stats.subjects, label: 'مواد دراسية' },
+    { icon: '🏫', value: stats.grades, label: 'صفوف دراسية' },
+    { icon: '📚', value: stats.subjects, label: 'مادة دراسية' },
     { icon: '🎥', value: stats.lessons, label: 'درس مصوّر' },
     { icon: '❓', value: stats.questions, label: 'سؤال في البنك' },
   ];
@@ -108,13 +119,13 @@ function Stats() {
 
 function WhyYusr() {
   const reasons = [
-    { icon: '🎬', title: 'حصص مسجلة كاملة', desc: 'شروحات مبسطة لكل درس بجودة عالية، توقف واستمر في أي وقت.', color: 'bg-violet-100' },
-    { icon: '📄', title: 'ملخصات وملفات PDF', desc: 'ملخصات، أوراق عمل، نماذج اختبارات، ومراجعات جاهزة للتحميل.', color: 'bg-blue-100' },
-    { icon: '📝', title: 'بنك أسئلة ضخم', desc: 'آلاف الأسئلة مصنفة حسب الوحدة والمستوى مع تصحيح فوري.', color: 'bg-emerald-100' },
-    { icon: '📑', title: 'اختبارات ومراجعات', desc: 'اختبارات دروس ووحدات ونهائية مع نتيجة فورية وتحليل الأداء.', color: 'bg-amber-100' },
-    { icon: '🎥', title: 'حصص مباشرة', desc: 'حصص تفاعلية مع المعلمين للإجابة عن أسئلتك وحل تمارين.', color: 'bg-pink-100' },
-    { icon: '💬', title: 'جروبات مجانية', desc: 'جروبات واتساب لكل صف: أسئلة يومية ومراجعات مجانية مستمرة.', color: 'bg-cyan-100' },
-    { icon: '🎁', title: 'نقاط وهدايا تحفيزية', desc: 'اجمع النقاط من المذاكرة والاختبارات واربح هدايا نهاية الأسبوع.', color: 'bg-orange-100' },
+    { icon: '🎬', title: 'دروس منظمة', desc: 'دروس مسجلة حسب الصف والمادة، توقف واستمر في أي وقت.', color: 'bg-violet-100' },
+    { icon: '📝', title: 'اختبارات تفاعلية', desc: 'اختبارات فورية مع تصحيح تلقائي وشروحات للأسئلة.', color: 'bg-emerald-100' },
+    { icon: '🎥', title: 'حصص مباشرة', desc: 'حصص تفاعلية مع المعلمين للإجابة عن أسئلتك.', color: 'bg-pink-100' },
+    { icon: '📄', title: 'موارد ومراجعات', desc: 'ملخصات، أوراق عمل، ونماذج اختبارات جاهزة للتحميل.', color: 'bg-amber-100' },
+    { icon: '📊', title: 'متابعة التقدم', desc: 'لوحات تحكم تتابع تقدمك في كل مادة.', color: 'bg-blue-100' },
+    { icon: '🏅', title: 'نقاط وإنجازات', desc: 'اجمع النقاط من المذاكرة وتنافس مع زملائك.', color: 'bg-orange-100' },
+    { icon: '🤖', title: 'مساعد ذكي', desc: 'اسأل المساعد الذكي أي سؤال دراسي واحصل على شرح فوري.', color: 'bg-cyan-100' },
   ];
   return (
     <section className="bg-white border-y border-slate-100 py-20">
@@ -130,7 +141,7 @@ function WhyYusr() {
           ))}
           <div className="rounded-3xl bg-gradient-to-br from-violet-600 to-purple-700 text-white p-7 flex flex-col justify-center">
             <h3 className="font-extrabold text-lg mb-2">جرب يُسر مجاناً</h3>
-            <p className="text-violet-100 text-sm leading-7 mb-5">الدروس والملفات والمراجعات متاحة بسهولة، واشترك فقط عندما تكون جاهزاً للتقدم الكامل.</p>
+            <p className="text-violet-100 text-sm leading-7 mb-5">الموارد متاحة مجاناً. اشترك فقط عندما تكون جاهزاً.</p>
             <Link to="/register" className="inline-block text-center bg-amber-400 text-slate-900 font-extrabold px-6 py-3 rounded-xl hover:-translate-y-0.5 transition-all">إنشاء حساب مجاني</Link>
           </div>
         </div>
@@ -142,20 +153,22 @@ function WhyYusr() {
 function Steps() {
   const steps = [
     { icon: '🏫', title: 'اختر صفّك', desc: 'اختر صفك من الثامن حتى الثاني عشر', color: 'bg-blue-500' },
-    { icon: '📚', title: 'اختر مادتك', desc: 'شاهد الحصص وحمّل الملخصات والملفات', color: 'bg-violet-500' },
-    { icon: '🏆', title: 'اختبر وتقدم', desc: 'حل الأسئلة والاختبارات وجمع النقاط', color: 'bg-amber-500' },
+    { icon: '📚', title: 'اختر مادتك', desc: 'تصفح المواد المتاحة وابدأ بال学习', color: 'bg-violet-500' },
+    { icon: '🎬', title: 'شاهد الدرس', desc: 'دروس مسجلة بجودة عالية', color: 'bg-pink-500' },
+    { icon: '📝', title: 'اختبر فهمك', desc: ' حل الأسئلة والاختبارات', color: 'bg-emerald-500' },
+    { icon: '📊', title: 'تابع تقدمك', desc: 'لوحات تحكم ونتائج لحظية', color: 'bg-amber-500' },
   ];
   return (
     <section className="max-w-7xl mx-auto px-4 py-20">
-      <SectionHeader eyebrow="كيف تعمل يُسر؟" title="ابدأ في 3 خطوات بسيطة" center />
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative">
-        <div className="hidden md:block absolute top-14 left-[15%] right-[15%] h-1 bg-gradient-to-l from-violet-200 via-purple-200 to-violet-200 rounded-full" />
+      <SectionHeader eyebrow="كيف تعمل يُسر؟" title="ابدأ في 5 خطوات بسيطة" center />
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-6 relative">
+        <div className="hidden md:block absolute top-14 left-[10%] right-[10%] h-1 bg-gradient-to-l from-violet-200 via-purple-200 to-violet-200 rounded-full" />
         {steps.map((s, i) => (
-          <div key={s.title} className="relative text-center bg-white rounded-3xl border border-slate-100 shadow-sm p-8 hover:shadow-xl hover:-translate-y-1 transition-all animate-fade-up" style={{ animationDelay: `${i * 0.1}s` }}>
-            <div className={`w-16 h-16 mx-auto rounded-2xl ${s.color} text-white flex items-center justify-center text-3xl mb-5 shadow-lg relative z-10`}>{s.icon}</div>
-            <span className="inline-block px-3 py-1 rounded-full bg-violet-100 text-violet-700 text-xs font-black mb-2">الخطوة {i + 1}</span>
-            <h3 className="text-lg font-extrabold text-slate-900 mb-2">{s.title}</h3>
-            <p className="text-sm text-slate-500 leading-6">{s.desc}</p>
+          <div key={s.title} className="relative text-center bg-white rounded-3xl border border-slate-100 shadow-sm p-6 hover:shadow-xl hover:-translate-y-1 transition-all animate-fade-up" style={{ animationDelay: `${i * 0.1}s` }}>
+            <div className={`w-14 h-14 mx-auto rounded-2xl ${s.color} text-white flex items-center justify-center text-2xl mb-4 shadow-lg relative z-10`}>{s.icon}</div>
+            <span className="inline-block px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 text-[10px] font-black mb-1">الخطوة {i + 1}</span>
+            <h3 className="text-sm font-extrabold text-slate-900 mb-1">{s.title}</h3>
+            <p className="text-xs text-slate-500 leading-5">{s.desc}</p>
           </div>
         ))}
       </div>
@@ -224,7 +237,6 @@ function LatestLessons() {
   useEffect(() => {
     api.get('/lessons').then((data) => setLessons(data.slice(0, 4))).finally(() => setLoading(false));
   }, []);
-  if (loading) return <Loading />;
   return (
     <section className="max-w-7xl mx-auto px-4 py-20">
       <div className="flex items-end justify-between mb-10">
@@ -232,7 +244,16 @@ function LatestLessons() {
         <Link to="/subjects" className="text-violet-600 font-bold text-sm whitespace-nowrap">عرض جميع المواد ←</Link>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {lessons.map((l, i) => <LessonCard key={l.id} lesson={l} index={i} />)}
+        {loading ? (
+          [1,2,3,4].map((i) => <SkeletonCard key={i} />)
+        ) : lessons.length === 0 ? (
+          <div className="col-span-full text-center py-12 bg-slate-50 rounded-3xl">
+            <p className="text-3xl mb-2">📚</p>
+            <p className="text-slate-500 font-bold">سيتم إضافة الدروس قريباً</p>
+          </div>
+        ) : (
+          lessons.map((l, i) => <LessonCard key={l.id} lesson={l} index={i} />)
+        )}
       </div>
     </section>
   );
@@ -240,52 +261,91 @@ function LatestLessons() {
 
 function LivePreview() {
   const [sessions, setSessions] = useState([]);
-  useEffect(() => { api.get('/live-sessions?status=upcoming').then(setSessions).catch(() => {}); }, []);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    api.get('/live-sessions?status=upcoming').then(setSessions).catch(() => {}).finally(() => setLoading(false));
+  }, []);
   return (
     <section className="bg-white border-y border-slate-100 py-20">
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-end justify-between mb-10">
-          <SectionHeader eyebrow="الحصص المباشرة" title="حصص مباشرة مع المعلمين" subtitle="حضّر أسئلتك وشارك في الحصص التفاعلية المجانية والمشتركين." />
+          <SectionHeader eyebrow="الحصص المباشرة" title="تعلّم مع معلمك مباشرة" subtitle="انضم للحصص التفاعلية واحصل على إجابات فورية لأسئلتك." />
           <Link to="/live-sessions" className="text-violet-600 font-bold text-sm whitespace-nowrap">جميع الحصص ←</Link>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {sessions.slice(0, 4).map((s) => (
-            <div key={s.id} className="bg-slate-50 rounded-3xl border border-slate-100 p-6 hover:shadow-lg hover:-translate-y-1 transition-all">
-              <div className="flex items-center gap-2 mb-4">
-                <span className="w-10 h-10 rounded-xl flex items-center justify-center text-lg bg-white shadow-sm">{s.subject_icon}</span>
-                <div>
-                  <p className="font-bold text-sm">{s.subject_name}</p>
-                  <p className="text-xs text-slate-400">{s.grade_name}</p>
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[1,2,3,4].map((i) => <SkeletonCard key={i} />)}
+          </div>
+        ) : sessions.length === 0 ? (
+          <div className="text-center py-16 bg-slate-50 rounded-3xl">
+            <div className="text-5xl mb-4">🎥</div>
+            <h3 className="text-xl font-extrabold text-slate-900 mb-2">لا توجد حصص قادمة حاليًا</h3>
+            <p className="text-slate-500 mb-6 max-w-md mx-auto">تابعنا للإشعار بالحصص المباشرة القادمة. يمكنك الآن استكشاف الدروس المسجلة.</p>
+            <Link to="/lessons" className="inline-block bg-violet-600 text-white font-bold px-6 py-3 rounded-2xl hover:bg-violet-700 transition-colors">استكشف الدروس</Link>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {sessions.slice(0, 4).map((s) => (
+              <div key={s.id} className="bg-slate-50 rounded-3xl border border-slate-100 p-6 hover:shadow-lg hover:-translate-y-1 transition-all">
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="w-10 h-10 rounded-xl flex items-center justify-center text-lg bg-white shadow-sm">{s.subject_icon}</span>
+                  <div>
+                    <p className="font-bold text-sm">{s.subject_name}</p>
+                    <p className="text-xs text-slate-400">{s.grade_name}</p>
+                  </div>
+                </div>
+                <h3 className="font-extrabold text-slate-900 mb-2 leading-6">{s.title}</h3>
+                <p className="text-xs text-slate-500 mb-4">👨‍🏫 {s.teacher_name}</p>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-500 font-bold" dir="ltr">📅 {s.session_date?.slice(5)}</span>
+                  <span className="text-violet-700 font-black" dir="ltr">🕒 {s.session_time}</span>
                 </div>
               </div>
-              <h3 className="font-extrabold text-slate-900 mb-2 leading-6">{s.title}</h3>
-              <p className="text-xs text-slate-500 mb-4">👨‍🏫 {s.teacher_name}</p>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-500 font-bold" dir="ltr">📅 {s.session_date?.slice(5)}</span>
-                <span className="text-violet-700 font-black" dir="ltr">🕒 {s.session_time}</span>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );
 }
 
-function SubjectsStrip() {
+function SubjectsSection() {
   const [subjects, setSubjects] = useState([]);
-  useEffect(() => { api.get('/subjects').then(setSubjects).catch(() => {}); }, []);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    api.get('/subjects').then(setSubjects).catch(() => {}).finally(() => setLoading(false));
+  }, []);
   return (
     <section className="max-w-7xl mx-auto px-4 py-20">
-      <SectionHeader eyebrow="المواد" title="جميع المواد الأساسية" center />
-      <div className="grid grid-cols-3 gap-4">
-        {subjects.map((s) => (
-          <Link key={s.id} to={`/subjects/${s.id}`} className="group flex flex-col items-center gap-3 bg-white rounded-2xl border border-slate-100 p-5 hover:shadow-lg hover:-translate-y-1 transition-all">
-            <span className="text-3xl group-hover:scale-110 transition-transform">{s.icon}</span>
-            <span className="text-sm font-bold text-slate-700 group-hover:text-violet-700 text-center">{s.name}</span>
-          </Link>
-        ))}
-      </div>
+      <SectionHeader eyebrow="المواد الدراسية" title="جميع المواد المتاحة" center />
+      {loading ? (
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          {[1,2,3,4,5,6].map((i) => <SkeletonCard key={i} />)}
+        </div>
+      ) : subjects.length === 0 ? (
+        <div className="text-center py-12 bg-slate-50 rounded-3xl">
+          <p className="text-3xl mb-2">📚</p>
+          <p className="text-slate-500 font-bold">سيتم إضافة المواد قريباً</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          {subjects.map((s) => (
+            <Link key={s.id} to={`/subjects/${s.id}`} className="group bg-white rounded-3xl border border-slate-100 p-6 hover:shadow-xl hover:-translate-y-1 transition-all">
+              <div className="flex items-center gap-4 mb-3">
+                <span className="text-3xl group-hover:scale-110 transition-transform">{s.icon}</span>
+                <div>
+                  <h3 className="font-extrabold text-slate-900 group-hover:text-violet-700">{s.name}</h3>
+                  <p className="text-xs text-slate-400">{s.lesson_count} درس</p>
+                </div>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-slate-400">صفوف {s.grade_from}-{s.grade_to}</span>
+                {s.price > 0 && <span className="font-bold text-violet-600">{s.price} ر.ع</span>}
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
     </section>
   );
 }
@@ -293,6 +353,7 @@ function SubjectsStrip() {
 function GroupsPreview() {
   const [groups, setGroups] = useState([]);
   useEffect(() => { api.get('/groups').then(setGroups).catch(() => {}); }, []);
+  if (groups.length === 0) return null;
   return (
     <section className="max-w-7xl mx-auto px-4 pb-20">
       <div className="bg-gradient-to-l from-emerald-600 to-green-600 rounded-[2rem] text-white overflow-hidden">
@@ -300,7 +361,7 @@ function GroupsPreview() {
           <div>
             <span className="inline-block px-3 py-1 rounded-full bg-white/15 border border-white/20 text-xs font-bold mb-4">مجاني ١٠٠٪</span>
             <h2 className="text-3xl md:text-4xl font-extrabold mb-4">انضم لجروب صفك المجاني على واتساب</h2>
-            <p className="text-green-100 leading-7 mb-8 max-w-lg">أسئلة يومية، مراجعات، تنبيهات بالحصص الجديدة، ومحتوى تعليمي مستمر — كل ذلك مجاناً داخل جروبات يُسر.</p>
+            <p className="text-green-100 leading-7 mb-8 max-w-lg">أسئلة يومية، مراجعات، تنبيهات بالحصص الجديدة، ومحتوى تعليمي مستمر — كل ذلك مجاناً.</p>
             <div className="flex flex-wrap gap-3">
               {groups.map((g) => (
                 <a key={g.id} href={g.link} target="_blank" rel="noreferrer" className="bg-white text-emerald-700 font-extrabold px-5 py-3 rounded-2xl text-sm hover:-translate-y-0.5 transition-all shadow-lg">
@@ -322,15 +383,26 @@ function GroupsPreview() {
 }
 
 function PricingTeaser() {
-  const sections = [
-    { label: 'قسم ٨-١٠', note: 'الصفوف ٨، ٩، ١٠', per: '15', ex: 'مثال: 4 مواد = 60 ر.ع', featured: false },
-    { label: 'قسم ١١-١٢', note: 'الصفوف ١١، ١٢', per: '20', ex: 'مثال: 4 مواد = 80 ر.ع', featured: true },
-  ];
+  const [plans, setPlans] = useState([]);
+  useEffect(() => {
+    Promise.all([
+      api.get('/subscription/plans?grade=9'),
+      api.get('/subscription/plans?grade=11'),
+    ]).then(([junior, senior]) => {
+      const p = [];
+      if (junior?.perSubject) p.push({ label: 'قسم ٨-١٠', note: 'الصفوف ٨، ٩، ١٠', per: junior.perSubject, featured: false });
+      if (senior?.perSubject) p.push({ label: 'قسم ١١-١٢', note: 'الصفوف ١١، ١٢', per: senior.perSubject, featured: true });
+      setPlans(p);
+    }).catch(() => {});
+  }, []);
+
+  if (plans.length === 0) return null;
+
   return (
     <section className="max-w-7xl mx-auto px-4 pb-20">
-      <SectionHeader eyebrow="الاشتراكات" title="اشترك بالمواد التي تحتاجها فقط" subtitle="اختر بحرية — كل مادة بسعرها حسب قسمك الدراسي، وأي عدد من المواد." center />
+      <SectionHeader eyebrow="الاشتراكات" title="اشترك بالمواد التي تحتاجها فقط" subtitle="اختر بحرية — كل مادة بسعرها حسب قسمك الدراسي." center />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-        {sections.map((sec) => (
+        {plans.map((sec) => (
           <div key={sec.label} className={`rounded-3xl p-8 relative overflow-hidden ${sec.featured ? 'bg-gradient-to-br from-violet-600 to-purple-700 text-white shadow-2xl' : 'bg-white border-2 border-violet-200 shadow-xl'}`}>
             <div className="absolute -top-10 -left-10 w-40 h-40 rounded-full bg-amber-400/20 blur-2xl" />
             <span className={`relative inline-block px-3 py-1 rounded-full text-xs font-black mb-3 ${sec.featured ? 'bg-amber-400 text-slate-900' : 'bg-violet-100 text-violet-700'}`}>{sec.label}</span>
@@ -339,7 +411,6 @@ function PricingTeaser() {
               <p className={`text-xs font-bold ${sec.featured ? 'text-violet-200' : 'text-slate-400'}`}>المادة الواحدة بسعر</p>
               <p className={`font-black text-4xl mt-1 ${sec.featured ? 'text-white' : 'text-slate-900'}`}>{sec.per} <span className="text-base font-bold opacity-70">ر.ع / سنة</span></p>
             </div>
-            <p className={`relative text-center text-sm mt-4 ${sec.featured ? 'text-violet-100' : 'text-slate-500'}`}>{sec.ex} — اختر ما تريد</p>
             <Link to="/pricing" className={`relative block text-center mt-6 font-extrabold py-3.5 rounded-2xl transition-all ${sec.featured ? 'bg-amber-400 text-slate-900 hover:-translate-y-0.5' : 'bg-violet-600 text-white hover:bg-violet-700'}`}>اشترك الآن</Link>
           </div>
         ))}
@@ -348,31 +419,30 @@ function PricingTeaser() {
   );
 }
 
-function Testimonials() {
-  const items = [
-    { quote: 'المنصة سهلة ومنظمة، ساعدتني على رفع درجاتي في الرياضيات.', name: 'ريم', grade: 'الصف ١١', initial: 'ر', color: 'bg-pink-500' },
-    { quote: 'الشروحات واضحة والاختبارات ممتازة. أنصح كل زملائي بها.', name: 'خالد', grade: 'الصف ٩', initial: 'خ', color: 'bg-blue-500' },
-    { quote: 'الجروبات المجانية مفيدة جداً، أحصل على مراجعات وأسئلة يومية.', name: 'منى', grade: 'الصف ١٢', initial: 'م', color: 'bg-emerald-500' },
-  ];
+function ExamsSection() {
   return (
-    <section className="bg-white border-y border-slate-100 py-20">
-      <div className="max-w-7xl mx-auto px-4">
-        <SectionHeader eyebrow="آراء الطلاب" title="ماذا يقولون عن يُسر؟" center />
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {items.map((t) => (
-            <div key={t.name} className="bg-slate-50 rounded-3xl border border-slate-100 p-7">
-              <div className="text-amber-400 mb-4 text-xl">★★★★★</div>
-              <p className="text-slate-600 leading-8 mb-6">"{t.quote}"</p>
-              <div className="flex items-center gap-3">
-                <div className={`w-11 h-11 rounded-full ${t.color} text-white flex items-center justify-center font-bold`}>{t.initial}</div>
-                <div>
-                  <p className="font-extrabold text-slate-900">{t.name}</p>
-                  <p className="text-xs text-slate-500">— {t.grade}</p>
-                </div>
-              </div>
+    <section className="max-w-7xl mx-auto px-4 py-20">
+      <SectionHeader eyebrow="الاختبارات" title="اختبر فهمك وتابع تطورك" center />
+      <div className="bg-gradient-to-l from-violet-600 to-purple-700 rounded-[2rem] text-white p-10 md:p-14 text-center">
+        <div className="text-5xl mb-4">📝</div>
+        <h3 className="text-2xl md:text-3xl font-black mb-3">اختبارات تفاعلية مع تصحيح فوري</h3>
+        <p className="text-violet-100 max-w-2xl mx-auto mb-8 leading-7">
+          أداء الاختبار ← معرفة نتيجتك فوراً ← مراجعة أخطائك مع الشرح ← متابعة تطورك مع كل اختبار.
+        </p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto mb-8">
+          {[
+            { icon: '✅', text: 'تصحيح تلقائي' },
+            { icon: '💡', text: 'شروحات الأسئلة' },
+            { icon: '📈', text: 'متابعة التقدم' },
+            { icon: '🏆', text: 'نقاط تحفيزية' },
+          ].map((item) => (
+            <div key={item.text} className="bg-white/10 border border-white/20 rounded-2xl p-4">
+              <span className="text-2xl block mb-1">{item.icon}</span>
+              <span className="text-sm font-bold">{item.text}</span>
             </div>
           ))}
         </div>
+        <Link to="/exams" className="inline-block bg-amber-400 text-slate-900 font-extrabold px-10 py-4 rounded-2xl text-lg hover:-translate-y-1 transition-all shadow-2xl shadow-amber-500/25">ابدأ اختبارك الأول</Link>
       </div>
     </section>
   );
@@ -387,11 +457,11 @@ function CTABanner() {
           <div className="absolute bottom-0 left-10 w-96 h-96 rounded-full bg-white blur-3xl" />
         </div>
         <div className="relative">
-          <h2 className="text-3xl md:text-5xl font-black mb-4">جاهز لبدء رحلتك مع يُسر؟</h2>
-          <p className="text-violet-100 text-lg mb-8 max-w-xl mx-auto">انضم لآلاف الطلاب واحصل على تجربة تعليمية متكاملة اليوم.</p>
+          <h2 className="text-3xl md:text-5xl font-black mb-4">ابدأ رحلتك التعليمية مع يُسر</h2>
+          <p className="text-violet-100 text-lg mb-8 max-w-xl mx-auto">سجّل حسابك مجاناً واستكشف المحتوى التعليمي المتاح لصفك.</p>
           <div className="flex flex-wrap justify-center gap-4">
-            <Link to="/register" className="inline-block bg-amber-400 text-slate-900 font-extrabold px-10 py-4 rounded-2xl text-lg hover:-translate-y-1 transition-all shadow-2xl shadow-amber-500/25">أنشئ حسابك مجاناً</Link>
-            <Link to="/contact" className="inline-block bg-white/10 border border-white/25 font-bold px-10 py-4 rounded-2xl text-lg hover:bg-white/20 transition-all">تواصل معنا</Link>
+            <Link to="/register" className="inline-block bg-amber-400 text-slate-900 font-extrabold px-10 py-4 rounded-2xl text-lg hover:-translate-y-1 transition-all shadow-2xl shadow-amber-500/25">سجّل مجاناً</Link>
+            <Link to="/subjects" className="inline-block bg-white/10 border border-white/25 font-bold px-10 py-4 rounded-2xl text-lg hover:bg-white/20 transition-all">استكشف المواد</Link>
           </div>
         </div>
       </div>
@@ -412,13 +482,29 @@ export default function Home() {
       <Stats />
       <WhyYusr />
       <Steps />
-      {loading ? <Loading /> : <GradesSection grades={grades} />}
+      {loading ? (
+        <section className="bg-gradient-to-br from-violet-700 via-purple-800 to-indigo-900 py-20">
+          <div className="max-w-7xl mx-auto px-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
+              {[1,2,3,4].map((i) => (
+                <div key={i} className="bg-white/10 rounded-3xl p-6 animate-pulse">
+                  <div className="w-16 h-16 rounded-2xl bg-white/20 mx-auto mb-4" />
+                  <div className="h-5 w-24 bg-white/20 mx-auto mb-2" />
+                  <div className="h-3 w-32 bg-white/10 mx-auto" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : (
+        <GradesSection grades={grades} />
+      )}
       <LatestLessons />
       <LivePreview />
-      <SubjectsStrip />
+      <SubjectsSection />
       <GroupsPreview />
       <PricingTeaser />
-      <Testimonials />
+      <ExamsSection />
       <CTABanner />
     </div>
   );

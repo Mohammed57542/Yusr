@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import db from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
-import { REWARD_RATE } from './ambassador.js';
 import { getPaymentProvider } from '../services/payments/provider.js';
 
 const router = Router();
@@ -81,7 +80,7 @@ router.get('/my-subjects', requireAuth, (req, res) => {
 });
 
 router.post('/subscribe', requireAuth, async (req, res) => {
-  const { plan, subject_ids, referral_code } = req.body;
+  const { plan, subject_ids } = req.body;
   if (!Array.isArray(subject_ids) || subject_ids.length === 0) {
     return res.status(400).json({ error: 'اختر مادة واحدة على الأقل' });
   }
@@ -91,7 +90,6 @@ router.post('/subscribe', requireAuth, async (req, res) => {
     if (!subject) return res.status(400).json({ error: 'مادة غير موجودة' });
   }
 
-  // الحساب من بيانات الأسعار الديناميكية في قاعدة البيانات
   const section = sectionOf(req.user.grade);
   let price, planName;
   const dbPlan = plan ? planOf(section, plan) : null;
@@ -105,15 +103,6 @@ router.post('/subscribe', requireAuth, async (req, res) => {
   } else {
     price = ids.length * perSubjectPrice(req.user.grade);
     planName = ids.length === 1 ? 'مادة واحدة' : `${ids.length} مواد`;
-  }
-
-  // التحقق من كود السفير قبل إتمام الاشتراك
-  let ambassador = null;
-  if (referral_code && String(referral_code).trim()) {
-    const code = String(referral_code).trim().toUpperCase();
-    ambassador = db.prepare('SELECT id, name FROM users WHERE referral_code = ?').get(code);
-    if (!ambassador) return res.status(400).json({ error: 'كود السفير غير صحيح، تحقق منه أو اتركه فارغاً' });
-    if (ambassador.id === req.user.id) return res.status(400).json({ error: 'لا يمكنك استخدام كودك الخاص' });
   }
 
   const exp = new Date();
@@ -130,11 +119,9 @@ router.post('/subscribe', requireAuth, async (req, res) => {
     }
   }
 
-  // إشعار للطالب
   db.prepare('INSERT INTO notifications (user_id, title, body, type) VALUES (?, ?, ?, ?)')
     .run(req.user.id, '✅ تم تفعيل اشتراكك', `تم تفعيل اشتراكك في ${planName} بنجاح (${price} ر.ع). أهلاً بك في يُسر!`, 'subscription');
 
-  // تسجيل الدفعة عبر بوابة الدفع (Mock حالياً — التأكيد دائماً من الخادم)
   const provider = getPaymentProvider();
   const payment = await provider.createPayment({
     user: req.user,
@@ -142,23 +129,13 @@ router.post('/subscribe', requireAuth, async (req, res) => {
     currency: 'OMR',
     plan_key: plan ?? null,
     subject_ids: ids,
-    referral_code: referral_code ? String(referral_code).trim().toUpperCase() : null,
   });
   db.prepare(`
-    INSERT INTO payments (user_id, amount, currency, provider, provider_ref, status, plan_key, subject_ids, referral_code, paid_at)
-    VALUES (?, ?, 'OMR', ?, ?, ?, ?, ?, ?, datetime('now'))
-  `).run(req.user.id, price, payment.provider, payment.provider_ref, payment.status, plan ?? null, JSON.stringify(ids), referral_code ? String(referral_code).trim().toUpperCase() : null);
+    INSERT INTO payments (user_id, amount, currency, provider, provider_ref, status, plan_key, subject_ids, paid_at)
+    VALUES (?, ?, 'OMR', ?, ?, ?, ?, ?, datetime('now'))
+  `).run(req.user.id, price, payment.provider, payment.provider_ref, payment.status, plan ?? null, JSON.stringify(ids));
 
-  // تسجيل إحالة السفير
-  if (ambassador) {
-    const reward = Math.round(price * REWARD_RATE * 100) / 100;
-    db.prepare('INSERT INTO referrals (ambassador_id, referred_user_id, amount, reward) VALUES (?, ?, ?, ?)')
-      .run(ambassador.id, req.user.id, price, reward);
-    db.prepare('INSERT INTO notifications (user_id, title, body, type) VALUES (?, ?, ?, ?)')
-      .run(ambassador.id, '🎉 إحالة جديدة', `اشترك ${req.user.name || 'طالب جديد'} في ${planName} باستخدام كودك وحصلت على ${reward} ر.ع.`, 'referral');
-  }
-
-  res.json({ message: `تم تفعيل ${planName} بنجاح!`, subjects: ids.length, price, referred: !!ambassador });
+  res.json({ message: `تم تفعيل ${planName} بنجاح!`, subjects: ids.length, price });
 });
 
 router.get('/me', requireAuth, (req, res) => {

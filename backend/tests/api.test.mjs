@@ -142,7 +142,8 @@ test('006 تقديم الاختبار: النقاط تُمنح للمحاولة 
   assert.ok(first.data.points > 0, 'نقاط المحاولة الأولى');
 
   const second = await json(`/api/exams/${examId}/submit`, { method: 'POST', token: studentToken, body: { answers } });
-  assert.equal(second.data.points, 0, 'لا نقاط للتكرار');
+  assert.equal(second.status, 403, 'رفض المحاولة الثانية عند استنفاد المحاولات');
+  assert.ok(second.data.error.includes('المحاولات'), 'رسالة خطأ واضحة');
 });
 
 test('007 تقدم الدرس: نقطة واحدة عند الإكمال الأول', async () => {

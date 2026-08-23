@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../api/client';
-import { Loading, EmptyState } from '../components/common';
+import { Loading, Breadcrumbs } from '../components/common';
 
 const TYPES = ['درس', 'وحدة', 'نهائي'];
 
@@ -17,6 +17,9 @@ export default function Exams() {
   const subject = params.get('subject') || '';
   const unit = params.get('unit') || '';
   const type = params.get('type') || '';
+  const search = params.get('search') || '';
+
+  const filteredExams = search ? exams.filter((e) => e.title.includes(search) || e.subject_name.includes(search) || e.description.includes(search)) : exams;
 
   useEffect(() => {
     api.get('/grades').then(setGrades).catch(() => {});
@@ -49,6 +52,7 @@ export default function Exams() {
     <div>
       <div className="bg-gradient-to-br from-violet-700 via-purple-800 to-indigo-900 text-white">
         <div className="max-w-7xl mx-auto px-4 py-16 text-center">
+          <Breadcrumbs items={[{ label: 'الاختبارات' }]} />
           <span className="inline-block px-4 py-1.5 rounded-full bg-white/10 border border-white/20 text-sm font-bold mb-5">الاختبارات</span>
           <h1 className="text-4xl md:text-5xl font-black mb-4">اختبر نفسك وقيّم مستواك</h1>
           <p className="text-violet-200 text-lg max-w-2xl mx-auto">اختبارات دروس ووحدات ونهائية مع تصحيح فوري ونتيجة مباشرة وتحليل لأدائك.</p>
@@ -59,35 +63,76 @@ export default function Exams() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-10">
-        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 mb-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          <select value={grade} onChange={(e) => updateParam('grade', e.target.value)} className="px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-violet-400">
-            <option value="">كل الصفوف</option>
-            {grades.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
-          </select>
-          <select value={subject} onChange={(e) => updateParam('subject', e.target.value)} className="px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-violet-400">
-            <option value="">كل المواد</option>
-            {subjects.map((s) => <option key={s.id} value={s.id}>{s.icon} {s.name}</option>)}
-          </select>
-          <select value={type} onChange={(e) => updateParam('type', e.target.value)} className="px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-violet-400">
-            <option value="">كل الأنواع</option>
-            {TYPES.map((t) => <option key={t} value={t}>{t === 'نهائي' ? '🏁 نهائي' : t === 'وحدة' ? '📦 وحدة' : '📘 درس'}</option>)}
-          </select>
-          <select value={unit} onChange={(e) => updateParam('unit', e.target.value)} className="px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-violet-400">
-            <option value="">كل الوحدات</option>
-            {units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-          </select>
-          <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-violet-50 text-violet-700 text-sm font-bold">
-            📊 {exams.length} اختبار متاح
+        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 mb-8 space-y-4">
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="🔍 ابحث في الاختبارات..."
+              value={search}
+              onChange={(e) => updateParam('search', e.target.value)}
+              className="w-full px-5 py-3.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-violet-400 text-sm font-bold"
+            />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <select value={grade} onChange={(e) => updateParam('grade', e.target.value)} className="px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-violet-400">
+              <option value="">كل الصفوف</option>
+              {grades.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+            </select>
+            <select value={subject} onChange={(e) => updateParam('subject', e.target.value)} className="px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-violet-400">
+              <option value="">كل المواد</option>
+              {subjects.map((s) => <option key={s.id} value={s.id}>{s.icon} {s.name}</option>)}
+            </select>
+            <select value={type} onChange={(e) => updateParam('type', e.target.value)} className="px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-violet-400">
+              <option value="">كل الأنواع</option>
+              {TYPES.map((t) => <option key={t} value={t}>{t === 'نهائي' ? '🏁 نهائي' : t === 'وحدة' ? '📦 وحدة' : '📘 درس'}</option>)}
+            </select>
+            <select value={unit} onChange={(e) => updateParam('unit', e.target.value)} className="px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-violet-400">
+              <option value="">كل الوحدات</option>
+              {units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+            </select>
+          </div>
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-slate-500 font-bold">📊 {filteredExams.length} اختبار متاح</span>
+            {search && <button onClick={() => updateParam('search', '')} className="text-red-500 hover:text-red-600 font-bold">مسح البحث ✕</button>}
           </div>
         </div>
 
         {loading ? (
-          <Loading />
-        ) : exams.length === 0 ? (
-          <EmptyState icon="📝" title="لا توجد اختبارات مطابقة" description="غيّر الفلاتر أو جرّب مادة أخرى" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden animate-pulse">
+                <div className="p-6 border-b border-slate-100 bg-slate-50">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-10 h-10 rounded-xl bg-slate-200" />
+                    <div><div className="h-3 w-20 bg-slate-200 rounded mb-1" /><div className="h-2 w-14 bg-slate-100 rounded" /></div>
+                  </div>
+                  <div className="h-4 w-3/4 bg-slate-200 rounded" />
+                </div>
+                <div className="p-6">
+                  <div className="h-3 w-1/2 bg-slate-100 rounded mb-4" />
+                  <div className="h-3 w-full bg-slate-100 rounded mb-2" />
+                  <div className="h-3 w-2/3 bg-slate-100 rounded mb-4" />
+                  <div className="flex justify-between mb-5">
+                    <div className="h-2 w-12 bg-slate-100 rounded" />
+                    <div className="h-2 w-16 bg-slate-100 rounded" />
+                    <div className="h-2 w-10 bg-slate-100 rounded" />
+                  </div>
+                  <div className="h-10 bg-slate-200 rounded-2xl" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : filteredExams.length === 0 ? (
+          <div className="text-center py-20 px-4">
+            <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-slate-100 flex items-center justify-center">
+              <svg className="w-8 h-8 text-gray-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><line x1="4.93" y1="4.93" x2="19.07" y2="19.07" /></svg>
+            </div>
+            <h3 className="text-gray-500 text-lg font-bold mb-2">لا توجد اختبارات متاحة حالياً</h3>
+            <p className="text-gray-400 text-sm">اختبارات ستظهر قريباً</p>
+          </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {exams.map((e, i) => (
+            {filteredExams.map((e, i) => (
               <div key={e.id} className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all animate-fade-up" style={{ animationDelay: `${i * 0.05}s` }}>
                 <div className="p-6 border-b border-slate-100" style={{ background: `${e.grade_color}0d` }}>
                   <div className="flex items-center justify-between mb-3">

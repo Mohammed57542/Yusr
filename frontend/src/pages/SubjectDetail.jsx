@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { api } from '../api/client';
-import { Loading, EmptyState, Badge, Alert } from '../components/common';
+import { Loading, EmptyState, Badge, Alert, Breadcrumbs } from '../components/common';
 import { useAuth } from '../context/AuthContext';
 
 const SECTION_DEFS = [
@@ -91,7 +91,10 @@ export default function SubjectDetail() {
     <div>
       <div className="text-white" style={{ background: `linear-gradient(135deg, ${subject.color}, ${subject.color}aa)` }}>
         <div className="max-w-7xl mx-auto px-4 py-12">
-          <Link to="/subjects" className="text-white/80 hover:text-white text-sm mb-4 inline-block">→ جميع المواد</Link>
+          <Breadcrumbs items={[
+            { label: 'المواد', href: '/subjects' },
+            { label: subject.name }
+          ]} />
           <div className="flex flex-wrap items-center gap-6">
             <div className="w-20 h-20 rounded-3xl bg-white/15 border border-white/25 flex items-center justify-center text-5xl shadow-xl">{subject.icon}</div>
             <div className="flex-1 min-w-[220px]">
@@ -161,8 +164,7 @@ export default function SubjectDetail() {
                       <div className="flex-1 min-w-0">
                         <p className="font-bold text-slate-800 group-hover:text-violet-700 leading-6">{l.title}</p>
                         <p className="text-xs text-slate-400 mt-0.5">
-                          {l.teacher_name && <>👨‍🏫 {l.teacher_name} • </>}
-                          {l.sample && <span className="inline-block px-2 py-0.5 rounded-full bg-gold-100 text-gold-700 font-black border border-gold-300">🎁 عينة مجانية — بدون اشتراك</span>}
+                          {l.teacher_name && <>👨‍🏫 {l.teacher_name}</>}
                         </p>
                       </div>
                       <div className="text-left shrink-0 hidden sm:block">

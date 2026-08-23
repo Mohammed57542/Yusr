@@ -42,6 +42,7 @@ export default function QuestionBank() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [lockedInfo, setLockedInfo] = useState(null);
+  const [noResults, setNoResults] = useState(false);
 
   useEffect(() => {
     api.get('/grades').then(setGrades).catch(() => {});
@@ -57,6 +58,7 @@ export default function QuestionBank() {
   const start = async () => {
     if (!grade || !subject) { setError('اختر الصف والمادة أولاً'); return; }
     setError('');
+    setNoResults(false);
     setLoading(true);
     setResult(null);
     setAnswers({});
@@ -67,7 +69,8 @@ export default function QuestionBank() {
       if (difficulty) q.set('difficulty', difficulty);
       const res = await api.get(`/questions?${q}`);
       if (res.questions.length === 0) {
-        setError('لا توجد أسئلة مطابقة لاختياراتك، جرّب تقليل الفلاتر');
+        setNoResults(true);
+        setSession(null);
         setSession(null);
       } else {
         setSession(res.questions);
@@ -125,6 +128,19 @@ export default function QuestionBank() {
             </div>
 
             {error && <div className="mb-5"><Alert>{error}</Alert></div>}
+
+            {noResults && (
+              <div className="mb-5 bg-white rounded-3xl border border-slate-100 shadow-sm p-8">
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-slate-100 flex items-center justify-center">
+                    <svg className="w-8 h-8 text-gray-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><line x1="4.93" y1="4.93" x2="19.07" y2="19.07" /></svg>
+                  </div>
+                  <h3 className="text-gray-500 text-lg font-bold mb-2">لا توجد أسئلة متاحة</h3>
+                  <p className="text-gray-400 text-sm mb-4">أسئلة ستضاف قريباً</p>
+                  <button onClick={() => setNoResults(false)} className="bg-violet-600 text-white font-bold px-6 py-2.5 rounded-xl text-sm hover:bg-violet-700 transition-colors">تعديل الفلاتر</button>
+                </div>
+              </div>
+            )}
 
             <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8">
               {step === 1 && (

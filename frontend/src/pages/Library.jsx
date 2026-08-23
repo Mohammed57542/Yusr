@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../api/client';
-import { Loading, EmptyState, Alert, LockedContent } from '../components/common';
+import { Alert, LockedContent } from '../components/common';
 import useSettings, { waLink } from '../hooks/useSettings';
 
 const TYPES = ['الكل', 'ملخص', 'ورقة عمل', 'مراجعة', 'نموذج اختبار', 'أسئلة تدريبية', 'كتاب'];
@@ -100,9 +100,34 @@ export default function Library() {
         </div>
 
         {loading ? (
-          <Loading />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 animate-pulse">
+                <div className="flex items-start gap-4 mb-4">
+                  <div className="w-14 h-14 rounded-2xl bg-slate-200 shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <div className="h-4 w-16 bg-slate-100 rounded-full mb-2" />
+                    <div className="h-4 w-3/4 bg-slate-200 rounded" />
+                  </div>
+                </div>
+                <div className="h-3 w-full bg-slate-100 rounded mb-2" />
+                <div className="h-3 w-2/3 bg-slate-100 rounded mb-4" />
+                <div className="h-2 w-1/2 bg-slate-100 rounded mb-4" />
+                <div className="flex gap-2">
+                  <div className="flex-1 h-9 bg-slate-200 rounded-xl" />
+                  <div className="flex-1 h-9 bg-slate-100 rounded-xl" />
+                </div>
+              </div>
+            ))}
+          </div>
         ) : files.length === 0 ? (
-          <EmptyState icon="📂" title="لا توجد ملفات مطابقة" description="جرّب تغيير الفلاتر أو البحث بكلمات أخرى" />
+          <div className="text-center py-20 px-4">
+            <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-slate-100 flex items-center justify-center">
+              <svg className="w-8 h-8 text-gray-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><line x1="4.93" y1="4.93" x2="19.07" y2="19.07" /></svg>
+            </div>
+            <h3 className="text-gray-500 text-lg font-bold mb-2">لا توجد ملفات متاحة حالياً</h3>
+            <p className="text-gray-400 text-sm">جرّب تغيير الفلاتر أو البحث بكلمات أخرى</p>
+          </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {files.map((f, i) => (

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
-import { Alert, Input, Select } from '../components/common';
+import { Alert, Input, Select, Breadcrumbs } from '../components/common';
 
 export default function Profile() {
   const { user, login, logout } = useAuth();
@@ -38,6 +38,7 @@ export default function Profile() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-14">
+      <Breadcrumbs items={[{ label: 'الملف الشخصي' }]} />
       <div className="flex items-center gap-6 mb-10">
         <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-violet-600 to-purple-800 text-white flex items-center justify-center text-3xl font-black shadow-lg">
           {user.name.charAt(0)}
@@ -119,6 +120,57 @@ export default function Profile() {
             </button>
           </div>
         </form>
+      </div>
+
+      <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8 mt-6">
+        <h2 className="text-xl font-extrabold text-slate-900 mb-6">🔔 تفضيلات الإشعارات</h2>
+        <div className="space-y-4">
+          {[
+            { label: 'إشعارات الحصص المباشرة', desc: 'تنبيه عند بدء حصص مباشرة', checked: true },
+            { label: 'إشعارات الاختبارات', desc: 'تنبيه عند اختبارات جديدة', checked: true },
+            { label: 'إشعارات النقاط', desc: 'تنبيه عند حصولك على نقاط', checked: false },
+            { label: 'نشرة البريد الإلكتروني', desc: 'أخبار ومحتوى تعليمي أسبوعياً', checked: false },
+          ].map((item, i) => (
+            <label key={i} className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 hover:bg-violet-50 transition-colors cursor-pointer">
+              <div>
+                <p className="font-bold text-slate-800 text-sm">{item.label}</p>
+                <p className="text-xs text-slate-500">{item.desc}</p>
+              </div>
+              <div className="relative">
+                <input type="checkbox" defaultChecked={item.checked} className="sr-only peer" />
+                <div className="w-11 h-6 bg-slate-200 rounded-full peer peer-checked:bg-violet-600 transition-colors" />
+                <div className="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow peer-checked:translate-x-full transition-transform" />
+              </div>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8 mt-6">
+        <h2 className="text-xl font-extrabold text-slate-900 mb-6">🔒 الأمان</h2>
+        <div className="space-y-3">
+          <button className="w-full text-right p-4 rounded-2xl bg-slate-50 hover:bg-violet-50 transition-colors flex items-center justify-between">
+            <div>
+              <p className="font-bold text-slate-800 text-sm">تغيير كلمة المرور</p>
+              <p className="text-xs text-slate-500">آخر تغيير: غير معروف</p>
+            </div>
+            <span className="text-slate-400">←</span>
+          </button>
+          <button className="w-full text-right p-4 rounded-2xl bg-slate-50 hover:bg-violet-50 transition-colors flex items-center justify-between">
+            <div>
+              <p className="font-bold text-slate-800 text-sm">التحقق بخطوتين</p>
+              <p className="text-xs text-slate-500">حماية إضافية لحسابك</p>
+            </div>
+            <span className="px-3 py-1 rounded-full bg-amber-100 text-amber-700 text-xs font-bold">غير مفعّل</span>
+          </button>
+          <button className="w-full text-right p-4 rounded-2xl bg-red-50 hover:bg-red-100 transition-colors flex items-center justify-between">
+            <div>
+              <p className="font-bold text-red-600 text-sm">حذف الحساب</p>
+              <p className="text-xs text-red-400">حذف الحساب نهائياً (لا يمكن التراجع)</p>
+            </div>
+            <span className="text-red-400">←</span>
+          </button>
+        </div>
       </div>
     </div>
   );

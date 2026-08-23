@@ -73,12 +73,13 @@ const [plans, setPlans] = useState([]);
   const [subjectForm, setSubjectForm] = useState({ name: '', icon: '📘', color: '#3b82f6', slug: '', grade_from: 8, grade_to: 12, variant_id: '', price: '' });
   const [editingSubject, setEditingSubject] = useState(null);
   const [unitForm, setUnitForm] = useState({ subject_id: '', grade_id: '', name: '' });
-  const [lessonForm, setLessonForm] = useState({ subject_id: '', grade_id: '', unit_id: '', title: '', description: '', duration: 30, teacher_name: '', level: 'متوسط', video_url: '', pdf_url: '', is_sample: false, is_archive: false });
+  const [lessonForm, setLessonForm] = useState({ subject_id: '', grade_id: '', unit_id: '', title: '', description: '', duration: 30, teacher_name: '', level: 'متوسط', video_url: '', pdf_url: '', is_archive: false });
   const [editingLesson, setEditingLesson] = useState(null);
   const [questionForm, setQuestionForm] = useState({ subject_id: '', grade_id: '', unit_id: '', lesson_id: '', question: '', options: ['', '', '', ''], correct_index: 0, question_type: 'mcq', explanation: '', difficulty: 'متوسط' });
   const [editingQuestion, setEditingQuestion] = useState(null);
-  const [examForm, setExamForm] = useState({ subject_id: '', grade_id: '', unit_id: '', title: '', description: '', duration_minutes: 30, question_count: 10, exam_type: 'درس' });
+  const [examForm, setExamForm] = useState({ subject_id: '', grade_id: '', unit_id: '', title: '', description: '', duration_minutes: 30, question_count: 10, exam_type: 'درس', max_attempts: 1, open_at: '', close_at: '', is_free: false, show_results: true, allow_review: true, points_reward: 20 });
   const [editingExam, setEditingExam] = useState(null);
+  const [examAnalytics, setExamAnalytics] = useState(null);
   const [liveForm, setLiveForm] = useState({ subject_id: '', grade_id: '', title: '', teacher_name: '', session_date: '', session_time: '', status: 'upcoming', meeting_url: '', video_url: '' });
   const [editingLive, setEditingLive] = useState(null);
   const [newVariant, setNewVariant] = useState({ name: '', description: '' });
@@ -86,6 +87,20 @@ const [plans, setPlans] = useState([]);
   const [userQuery, setUserQuery] = useState('');
   const [userRole, setUserRole] = useState('');
   const [usersPage, setUsersPage] = useState('recent');
+
+  const [reportTab, setReportTab] = useState('students');
+  const [reportFrom, setReportFrom] = useState('');
+  const [reportTo, setReportTo] = useState('');
+  const [reportData, setReportData] = useState([]);
+  const [auditLog, setAuditLog] = useState([]);
+  const [auditPage, setAuditPage] = useState(1);
+  const [auditAction, setAuditAction] = useState('');
+  const [auditTotal, setAuditTotal] = useState(0);
+  const [pendingLessons, setPendingLessons] = useState([]);
+  const [pendingExams, setPendingExams] = useState([]);
+  const [teacherList, setTeacherList] = useState([]);
+  const [allSubjects, setAllSubjects] = useState([]);
+  const [editingTeacherSubjects, setEditingTeacherSubjects] = useState(null);
 
   const canAdmin = user && (user.role === 'admin' || user.role === 'teacher');
   const canManagePricing = user && user.role === 'admin';
@@ -163,6 +178,96 @@ const [plans, setPlans] = useState([]);
   const loadSettings = async () => {
     setError('');
     try { setSettings(await api.get('/admin/settings')); } catch (e) { setError(e.message); }
+  };
+
+  const loadReport = async (type) => {
+    setError('');
+    try {
+      const params = new URLSearchParams();
+      if (reportFrom) params.set('from_date', reportFrom);
+      if (reportTo) params.set('to_date', reportTo);
+      const q = params.toString();
+      setReportData(await api.get(`/admin/reports/${type}${q ? '?' + q : ''}`));
+    } catch (e) { setError(e.message); }
+  };
+
+  const loadAuditLog = async () => {
+    setError('');
+    try {
+      const params = new URLSearchParams({ page: String(auditPage), limit: '20' });
+      if (auditAction) params.set('action', auditAction);
+      const data = await api.get(`/admin/audit-log?${params}`);
+      setAuditLog(data.logs || data);
+      setAuditTotal(data.total || 0);
+    } catch (e) { setError(e.message); }
+  };
+
+  const loadPendingContent = async () => {
+    setError('');
+    try {
+      const [pl, pe] = await Promise.all([
+        api.get('/admin/lessons?status=pending'),
+        api.get('/admin/exams?status=pending'),
+      ]);
+      setPendingLessons(pl);
+      setPendingExams(pe);
+    } catch (e) { setError(e.message); }
+  };
+
+  const approveLesson = async (id) => {
+    setError('');
+    try { await api.patch(`/admin/lessons/${id}/approve`); setPendingLessons((p) => p.filter((l) => l.id !== id)); } catch (e) { setError(e.message); }
+  };
+
+  const rejectLesson = async (id) => {
+    const notes = prompt('سبب الرفض:');
+    if (notes === null) return;
+    setError('');
+    try { await api.patch(`/admin/lessons/${id}/approve`, { review_notes: notes }); setPendingLessons((p) => p.filter((l) => l.id !== id)); } catch (e) { setError(e.message); }
+  };
+
+  const approveExam = async (id) => {
+    setError('');
+    try { await api.patch(`/admin/exams/${id}/approve`); setPendingExams((p) => p.filter((x) => x.id !== id)); } catch (e) { setError(e.message); }
+  };
+
+  const rejectExam = async (id) => {
+    const notes = prompt('سبب الرفض:');
+    if (notes === null) return;
+    setError('');
+    try { await api.patch(`/admin/exams/${id}/approve`, { review_notes: notes }); setPendingExams((p) => p.filter((x) => x.id !== id)); } catch (e) { setError(e.message); }
+  };
+
+  const loadTeachers = async () => {
+    setError('');
+    try {
+      const [t, s] = await Promise.all([api.get('/admin/teachers'), api.get('/admin/subjects')]);
+      setTeacherList(t);
+      setAllSubjects(s);
+    } catch (e) { setError(e.message); }
+  };
+
+  const toggleTeacherSubject = async (teacherId, subjectId) => {
+    setError('');
+    try { await api.post(`/admin/teachers/${teacherId}/subjects`, { subject_id: subjectId }); loadTeachers(); } catch (e) { setError(e.message); }
+  };
+
+  const toggleTeacher = async (teacherId, enabled) => {
+    setError('');
+    try { await api.patch(`/admin/teachers/${teacherId}`, { enabled: enabled ? 1 : 0 }); loadTeachers(); } catch (e) { setError(e.message); }
+  };
+
+  const downloadCSV = (data, filename) => {
+    if (!data || !data.length) return;
+    const headers = Object.keys(data[0]);
+    const csv = [headers.join(','), ...data.map((row) => headers.map((h) => `"${String(row[h] ?? '').replace(/"/g, '""')}"`).join(','))].join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   const saveSetting = async (key, value) => {
@@ -294,7 +399,7 @@ const [plans, setPlans] = useState([]);
       const body = { ...lessonForm, grade_id: Number(lessonForm.grade_id), subject_id: Number(lessonForm.subject_id), unit_id: lessonForm.unit_id ? Number(lessonForm.unit_id) : '', duration: Number(lessonForm.duration) };
       if (editingLesson) await api.patch(`/admin/content-lessons/${editingLesson.id}`, body);
       else await api.post('/admin/content-lessons', body);
-      setLessonForm({ subject_id: '', grade_id: '', unit_id: '', title: '', description: '', duration: 30, teacher_name: '', level: 'متوسط', video_url: '', pdf_url: '', is_sample: false, is_archive: false });
+      setLessonForm({ subject_id: '', grade_id: '', unit_id: '', title: '', description: '', duration: 30, teacher_name: '', level: 'متوسط', video_url: '', pdf_url: '', is_archive: false });
       setEditingLesson(null);
       loadLessons();
     } catch (err) { setError(err.message); }
@@ -302,7 +407,7 @@ const [plans, setPlans] = useState([]);
 
   const editLesson = (l) => {
     setEditingLesson(l);
-    setLessonForm({ subject_id: l.subject_id, grade_id: l.grade_id, unit_id: l.unit_id ?? '', title: l.title, description: l.description, duration: l.duration, teacher_name: l.teacher_name ?? '', level: l.level, video_url: l.video_url ?? '', pdf_url: l.pdf_url ?? '', is_sample: !!l.is_sample, is_archive: !!l.is_archive });
+    setLessonForm({ subject_id: l.subject_id, grade_id: l.grade_id, unit_id: l.unit_id ?? '', title: l.title, description: l.description, duration: l.duration, teacher_name: l.teacher_name ?? '', level: l.level, video_url: l.video_url ?? '', pdf_url: l.pdf_url ?? '', is_archive: !!l.is_archive });
   };
 
   const deleteLesson = async (id) => {
@@ -359,10 +464,10 @@ const [plans, setPlans] = useState([]);
     e.preventDefault();
     setError('');
     try {
-      const body = { ...examForm, grade_id: Number(examForm.grade_id), subject_id: Number(examForm.subject_id), unit_id: examForm.unit_id ? Number(examForm.unit_id) : '', duration_minutes: Number(examForm.duration_minutes), question_count: Number(examForm.question_count) };
+      const body = { ...examForm, grade_id: Number(examForm.grade_id), subject_id: Number(examForm.subject_id), unit_id: examForm.unit_id ? Number(examForm.unit_id) : '', duration_minutes: Number(examForm.duration_minutes), question_count: Number(examForm.question_count), max_attempts: Number(examForm.max_attempts), open_at: examForm.open_at || null, close_at: examForm.close_at || null, is_free: examForm.is_free ? 1 : 0, show_results: examForm.show_results ? 1 : 0, allow_review: examForm.allow_review ? 1 : 0, points_reward: Number(examForm.points_reward) };
       if (editingExam) await api.patch(`/admin/content-exams/${editingExam.id}`, body);
       else await api.post('/admin/content-exams', body);
-      setExamForm({ subject_id: '', grade_id: '', unit_id: '', title: '', description: '', duration_minutes: 30, question_count: 10, exam_type: 'درس' });
+      setExamForm({ subject_id: '', grade_id: '', unit_id: '', title: '', description: '', duration_minutes: 30, question_count: 10, exam_type: 'درس', max_attempts: 1, open_at: '', close_at: '', is_free: false, show_results: true, allow_review: true, points_reward: 20 });
       setEditingExam(null);
       loadExams();
     } catch (err) { setError(err.message); }
@@ -370,12 +475,20 @@ const [plans, setPlans] = useState([]);
 
   const editExam = (x) => {
     setEditingExam(x);
-    setExamForm({ subject_id: x.subject_id, grade_id: x.grade_id, unit_id: x.unit_id ?? '', title: x.title, description: x.description, duration_minutes: x.duration_minutes, question_count: x.question_count, exam_type: x.exam_type });
+    setExamForm({ subject_id: x.subject_id, grade_id: x.grade_id, unit_id: x.unit_id ?? '', title: x.title, description: x.description, duration_minutes: x.duration_minutes, question_count: x.question_count, exam_type: x.exam_type, max_attempts: x.max_attempts ?? 1, open_at: x.open_at ?? '', close_at: x.close_at ?? '', is_free: !!x.is_free, show_results: x.show_results !== 0, allow_review: x.allow_review !== 0, points_reward: x.points_reward ?? 20 });
   };
 
   const deleteExam = async (id) => {
     if (!confirm('حذف هذا الاختبار؟')) return;
     try { await api.del(`/admin/content-exams/${id}`); setExams((p) => p.filter((x) => x.id !== id)); } catch (e) { setError(e.message); }
+  };
+
+  const loadExamAnalytics = async (examId) => {
+    setError('');
+    try {
+      const data = await api.get(`/admin/exam-analytics/${examId}`);
+      setExamAnalytics(data);
+    } catch (e) { setError(e.message); }
   };
 
   const saveLive = async (e) => {
@@ -434,6 +547,10 @@ const [plans, setPlans] = useState([]);
     if (id === 'live') loadLive();
     if (id === 'users') loadUsers();
     if (id === 'settings') loadSettings();
+    if (id === 'reports') loadReport(reportTab);
+    if (id === 'audit') loadAuditLog();
+    if (id === 'lessons') loadPendingContent();
+    if (id === 'teachers') loadTeachers();
   };
 
   if (!canAdmin) return null;
@@ -452,6 +569,9 @@ const [plans, setPlans] = useState([]);
     { id: 'resources', label: '📄 الملفات' },
     { id: 'results', label: '📊 النتائج' },
     { id: 'messages', label: '✉️ الرسائل' },
+    { id: 'reports', label: '📊 التقارير' },
+    { id: 'audit', label: '📋 سجل العمليات' },
+    { id: 'teachers', label: '👨‍🏫 المعلمون' },
 ];
   if (canManagePricing) tabs.push({ id: 'pricing', label: '💰 الأسعار والعروض' });
   if (user.role === 'admin') tabs.push({ id: 'settings', label: '⚙️ الإعدادات' });
@@ -493,6 +613,9 @@ const [plans, setPlans] = useState([]);
             <StatCard icon="👁️" label="مشاهدة" value={stats.totalViews} color="bg-blue-100 text-blue-700" />
             <StatCard icon="✉️" label="رسالة" value={stats.messages} color="bg-emerald-100 text-emerald-700" />
             <StatCard icon="⏳" label="طلبات معلقة" value={stats.pendingApplications} color="bg-red-100 text-red-700" />
+            <StatCard icon="📗" label="الاشتراكات النشطة" value={stats.activeSubscriptions} color="bg-emerald-100 text-emerald-700" />
+            <StatCard icon="💰" label="الإيرادات" value={`${Number(stats.totalRevenue).toFixed(3)} ر.ع`} color="bg-amber-100 text-amber-700" />
+            <StatCard icon="👥" label="المشتركين" value={stats.subscriberCount} color="bg-purple-100 text-purple-700" />
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-7">
@@ -542,6 +665,7 @@ const [plans, setPlans] = useState([]);
                   <th className="text-right px-6 py-4">الصف</th>
                   <th className="text-right px-6 py-4">النقاط</th>
                   <th className="text-right px-6 py-4">المواد</th>
+                  <th className="text-right px-6 py-4">الاشتراك</th>
                 </tr>
               </thead>
               <tbody>
@@ -553,6 +677,11 @@ const [plans, setPlans] = useState([]);
                     <td className="px-6 py-4 text-slate-600">{u.grade ? `الصف ${u.grade}` : '—'}</td>
                     <td className="px-6 py-4 font-black text-amber-600">{u.points}</td>
                     <td className="px-6 py-4 text-slate-600">{u.subjects_count ?? '—'}</td>
+                    <td className="px-6 py-4">
+                      <span className={`px-3 py-1 rounded-full text-xs font-black ${u.sub_status === 'active' ? 'bg-emerald-100 text-emerald-700' : u.sub_status === 'inactive' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'}`}>
+                        {u.sub_status === 'active' ? 'نشط' : u.sub_status === 'inactive' ? 'منتهي' : 'بدون'}
+                      </span>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -763,16 +892,12 @@ const [plans, setPlans] = useState([]);
               <input value={lessonForm.video_url} onChange={(e) => setLessonForm({ ...lessonForm, video_url: e.target.value })} placeholder="رابط الفيديو (يوتيوب أو mp4)" className="px-4 py-3 rounded-xl border border-slate-200 text-sm md:col-span-2" dir="ltr" />
               <input value={lessonForm.pdf_url} onChange={(e) => setLessonForm({ ...lessonForm, pdf_url: e.target.value })} placeholder="رابط الملخص PDF" className="px-4 py-3 rounded-xl border border-slate-200 text-sm md:col-span-2" dir="ltr" />
 <label className="flex items-center gap-2 text-sm font-bold text-slate-700 cursor-pointer">
-  <input type="checkbox" checked={lessonForm.is_sample} onChange={(e) => setLessonForm({ ...lessonForm, is_sample: e.target.checked })} className="w-4 h-4 accent-violet-600" />
-  🎁 درس عينة مجانية (بدون اشتراك)
-</label>
-<label className="flex items-center gap-2 text-sm font-bold text-slate-700 cursor-pointer">
   <input type="checkbox" checked={lessonForm.is_archive} onChange={(e) => setLessonForm({ ...lessonForm, is_archive: e.target.checked })} className="w-4 h-4 accent-violet-600" />
   🗂️ من السنوات السابقة (يظهر في تبويب السنوات السابقة)
 </label>
               <div className="flex gap-2 md:col-span-4">
                 <button type="submit" className="flex-1 bg-violet-600 text-white font-extrabold py-3 rounded-xl hover:bg-violet-700 transition-colors">{editingLesson ? 'حفظ' : 'إضافة'}</button>
-                {editingLesson && <button type="button" onClick={() => { setEditingLesson(null); setLessonForm({ subject_id: '', grade_id: '', unit_id: '', title: '', description: '', duration: 30, teacher_name: '', level: 'متوسط', video_url: '', pdf_url: '', is_sample: false, is_archive: false }); }} className="px-6 py-3 rounded-xl bg-slate-100 text-slate-600 font-bold text-sm">إلغاء</button>}
+                {editingLesson && <button type="button" onClick={() => { setEditingLesson(null); setLessonForm({ subject_id: '', grade_id: '', unit_id: '', title: '', description: '', duration: 30, teacher_name: '', level: 'متوسط', video_url: '', pdf_url: '', is_archive: false }); }} className="px-6 py-3 rounded-xl bg-slate-100 text-slate-600 font-bold text-sm">إلغاء</button>}
               </div>
             </form>
           </div>
@@ -808,6 +933,49 @@ const [plans, setPlans] = useState([]);
                 {lessons.length === 0 && <tr><td colSpan="6" className="text-center py-8 text-slate-400">لا توجد دروس.</td></tr>}
               </tbody>
             </table>
+          </div>
+
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
+            <h3 className="text-lg font-extrabold text-slate-900 mb-5">📋 محتوى ينتظر المراجعة</h3>
+            {pendingLessons.length === 0 && pendingExams.length === 0 && <p className="text-slate-400 text-sm">لا يوجد محتوى معلق.</p>}
+            {pendingLessons.length > 0 && (
+              <div className="mb-6">
+                <h4 className="font-extrabold text-slate-800 mb-3">دروس تنتظر المراجعة ({pendingLessons.length})</h4>
+                <div className="space-y-2">
+                  {pendingLessons.map((l) => (
+                    <div key={l.id} className="flex items-center justify-between gap-3 border border-slate-100 rounded-2xl px-4 py-3">
+                      <div>
+                        <p className="font-bold text-slate-800 text-sm">{l.title}</p>
+                        <p className="text-xs text-slate-400">{l.subject_name} • {l.grade_name} • {l.teacher_name || '—'}</p>
+                      </div>
+                      <div className="flex gap-2 shrink-0">
+                        <button onClick={() => approveLesson(l.id)} className="bg-green-600 text-white text-xs font-black px-4 py-2 rounded-xl hover:bg-green-700">موافقة</button>
+                        <button onClick={() => rejectLesson(l.id)} className="bg-red-50 text-red-600 text-xs font-black px-4 py-2 rounded-xl hover:bg-red-100">رفض</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {pendingExams.length > 0 && (
+              <div>
+                <h4 className="font-extrabold text-slate-800 mb-3">اختبارات تنتظر المراجعة ({pendingExams.length})</h4>
+                <div className="space-y-2">
+                  {pendingExams.map((x) => (
+                    <div key={x.id} className="flex items-center justify-between gap-3 border border-slate-100 rounded-2xl px-4 py-3">
+                      <div>
+                        <p className="font-bold text-slate-800 text-sm">{x.title}</p>
+                        <p className="text-xs text-slate-400">{x.subject_name} • {x.grade_name}</p>
+                      </div>
+                      <div className="flex gap-2 shrink-0">
+                        <button onClick={() => approveExam(x.id)} className="bg-green-600 text-white text-xs font-black px-4 py-2 rounded-xl hover:bg-green-700">موافقة</button>
+                        <button onClick={() => rejectExam(x.id)} className="bg-red-50 text-red-600 text-xs font-black px-4 py-2 rounded-xl hover:bg-red-100">رفض</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -920,9 +1088,25 @@ const [plans, setPlans] = useState([]);
               <input value={examForm.duration_minutes} onChange={(e) => setExamForm({ ...examForm, duration_minutes: e.target.value })} placeholder="المدة (دقيقة)" className="px-4 py-3 rounded-xl border border-slate-200 text-sm" type="number" min="1" required />
               <input value={examForm.question_count} onChange={(e) => setExamForm({ ...examForm, question_count: e.target.value })} placeholder="عدد الأسئلة" className="px-4 py-3 rounded-xl border border-slate-200 text-sm" type="number" min="1" required />
               <input value={examForm.description} onChange={(e) => setExamForm({ ...examForm, description: e.target.value })} placeholder="الوصف" className="px-4 py-3 rounded-xl border border-slate-200 text-sm md:col-span-4" />
+              <input value={examForm.max_attempts} onChange={(e) => setExamForm({ ...examForm, max_attempts: e.target.value })} placeholder="المحاولات المتاحة" className="px-4 py-3 rounded-xl border border-slate-200 text-sm" type="number" min="1" max="10" />
+              <input value={examForm.open_at} onChange={(e) => setExamForm({ ...examForm, open_at: e.target.value })} placeholder="يبدأ في" className="px-4 py-3 rounded-xl border border-slate-200 text-sm" type="datetime-local" />
+              <input value={examForm.close_at} onChange={(e) => setExamForm({ ...examForm, close_at: e.target.value })} placeholder="ينتهي في" className="px-4 py-3 rounded-xl border border-slate-200 text-sm" type="datetime-local" />
+              <input value={examForm.points_reward} onChange={(e) => setExamForm({ ...examForm, points_reward: e.target.value })} placeholder="نقاط المكافأة" className="px-4 py-3 rounded-xl border border-slate-200 text-sm" type="number" min="0" />
+              <label className="flex items-center gap-2 text-sm font-bold text-slate-700 cursor-pointer">
+                <input type="checkbox" checked={examForm.is_free} onChange={(e) => setExamForm({ ...examForm, is_free: e.target.checked })} className="w-4 h-4 accent-violet-600" />
+                مجاني
+              </label>
+              <label className="flex items-center gap-2 text-sm font-bold text-slate-700 cursor-pointer">
+                <input type="checkbox" checked={examForm.show_results} onChange={(e) => setExamForm({ ...examForm, show_results: e.target.checked })} className="w-4 h-4 accent-violet-600" />
+                إظهار النتائج فوراً
+              </label>
+              <label className="flex items-center gap-2 text-sm font-bold text-slate-700 cursor-pointer">
+                <input type="checkbox" checked={examForm.allow_review} onChange={(e) => setExamForm({ ...examForm, allow_review: e.target.checked })} className="w-4 h-4 accent-violet-600" />
+                السماح بمراجعة الإجابات
+              </label>
               <div className="flex gap-2 md:col-span-4">
                 <button type="submit" className="flex-1 bg-violet-600 text-white font-extrabold py-3 rounded-xl hover:bg-violet-700 transition-colors">{editingExam ? 'حفظ' : 'إضافة'}</button>
-                {editingExam && <button type="button" onClick={() => { setEditingExam(null); setExamForm({ subject_id: '', grade_id: '', unit_id: '', title: '', description: '', duration_minutes: 30, question_count: 10, exam_type: 'درس' }); }} className="px-6 py-3 rounded-xl bg-slate-100 text-slate-600 font-bold text-sm">إلغاء</button>}
+                {editingExam && <button type="button" onClick={() => { setEditingExam(null); setExamForm({ subject_id: '', grade_id: '', unit_id: '', title: '', description: '', duration_minutes: 30, question_count: 10, exam_type: 'درس', max_attempts: 1, open_at: '', close_at: '', is_free: false, show_results: true, allow_review: true, points_reward: 20 }); }} className="px-6 py-3 rounded-xl bg-slate-100 text-slate-600 font-bold text-sm">إلغاء</button>}
               </div>
             </form>
           </div>
@@ -936,6 +1120,9 @@ const [plans, setPlans] = useState([]);
                   <th className="text-right px-6 py-4">النوع</th>
                   <th className="text-right px-6 py-4">المدة</th>
                   <th className="text-right px-6 py-4">الأسئلة</th>
+                  <th className="text-right px-6 py-4">المحاولات</th>
+                  <th className="text-right px-6 py-4">مجاني</th>
+                  <th className="text-right px-6 py-4">إظهار النتائج</th>
                   <th className="text-right px-6 py-4">إجراءات</th>
                 </tr>
               </thead>
@@ -947,18 +1134,71 @@ const [plans, setPlans] = useState([]);
                     <td className="px-6 py-4"><span className="px-2.5 py-1 rounded-full text-xs font-black bg-violet-100 text-violet-700">{x.exam_type}</span></td>
                     <td className="px-6 py-4 text-slate-600">{x.duration_minutes} د</td>
                     <td className="px-6 py-4 text-slate-600">{x.question_count}</td>
+                    <td className="px-6 py-4 text-slate-600">{x.max_attempts}</td>
+                    <td className="px-6 py-4"><span className={`px-2.5 py-1 rounded-full text-xs font-black ${x.is_free ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>{x.is_free ? 'نعم' : 'لا'}</span></td>
+                    <td className="px-6 py-4"><span className={`px-2.5 py-1 rounded-full text-xs font-black ${x.show_results ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'}`}>{x.show_results ? 'نعم' : 'لا'}</span></td>
                     <td className="px-6 py-4">
                       <div className="flex gap-2">
+                        <button onClick={() => loadExamAnalytics(x.id)} className="bg-blue-50 text-blue-600 text-xs font-black px-3 py-1.5 rounded-lg hover:bg-blue-100">إحصائيات</button>
                         <button onClick={() => editExam(x)} className="bg-slate-100 text-slate-700 text-xs font-black px-3 py-1.5 rounded-lg hover:bg-slate-200">تعديل</button>
                         <button onClick={() => deleteExam(x.id)} className="bg-red-50 text-red-600 text-xs font-black px-3 py-1.5 rounded-lg hover:bg-red-100">حذف</button>
                       </div>
                     </td>
                   </tr>
                 ))}
-                {exams.length === 0 && <tr><td colSpan="6" className="text-center py-8 text-slate-400">لا توجد اختبارات.</td></tr>}
+                {exams.length === 0 && <tr><td colSpan="9" className="text-center py-8 text-slate-400">لا توجد اختبارات.</td></tr>}
               </tbody>
             </table>
           </div>
+
+          {examAnalytics && (
+            <div className="space-y-6">
+              <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-extrabold text-slate-900">📊 إحصائيات: {examAnalytics.exam.title}</h3>
+                  <p className="text-xs text-slate-400">{examAnalytics.exam.subject_name} • {examAnalytics.exam.grade_name}</p>
+                </div>
+                <button onClick={() => setExamAnalytics(null)} className="bg-slate-100 text-slate-600 font-bold text-sm px-4 py-2 rounded-xl hover:bg-slate-200">إغلاق</button>
+              </div>
+
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                <StatCard icon="📝" label="إجمالي المحاولات" value={examAnalytics.stats.totalAttempts} color="bg-blue-100 text-blue-700" />
+                <StatCard icon="👥" label="طلاب فريدون" value={examAnalytics.stats.uniqueStudents} color="bg-violet-100 text-violet-700" />
+                <StatCard icon="📈" label="متوسط الدرجات" value={`${examAnalytics.stats.avgScore}%`} color="bg-amber-100 text-amber-700" />
+                <StatCard icon="✅" label="نسبة النجاح" value={`${examAnalytics.stats.passRate}%`} color="bg-green-100 text-green-700" />
+                <StatCard icon="🏆" label="أعلى درجة" value={examAnalytics.stats.highestScore} color="bg-emerald-100 text-emerald-700" />
+                <StatCard icon="📉" label="أدنى درجة" value={examAnalytics.stats.lowestScore} color="bg-red-100 text-red-600" />
+              </div>
+
+              <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-x-auto">
+                <table className="w-full text-sm min-w-[640px]">
+                  <thead className="bg-slate-50 text-slate-500 text-xs">
+                    <tr>
+                      <th className="text-right px-6 py-4">الطالب</th>
+                      <th className="text-right px-6 py-4">البريد</th>
+                      <th className="text-right px-6 py-4">الدرجة</th>
+                      <th className="text-right px-6 py-4">المحاولات</th>
+                      <th className="text-right px-6 py-4">الوقت</th>
+                      <th className="text-right px-6 py-4">التاريخ</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {examAnalytics.results.map((r, i) => (
+                      <tr key={i} className="border-t border-slate-100">
+                        <td className="px-6 py-4 font-bold text-slate-800">{r.name}</td>
+                        <td className="px-6 py-4 text-slate-500" dir="ltr">{r.email}</td>
+                        <td className="px-6 py-4"><span className={`px-3 py-1 rounded-full text-xs font-black ${r.score >= 50 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>{r.score}%</span></td>
+                        <td className="px-6 py-4 text-slate-600">{r.attempt_number}</td>
+                        <td className="px-6 py-4 text-slate-600">{r.time_spent ? `${r.time_spent} ث` : '—'}</td>
+                        <td className="px-6 py-4 text-xs text-slate-400" dir="ltr">{r.created_at}</td>
+                      </tr>
+                    ))}
+                    {examAnalytics.results.length === 0 && <tr><td colSpan="6" className="text-center py-8 text-slate-400">لا توجد نتائج لهذا الاختبار.</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -1114,6 +1354,349 @@ const [plans, setPlans] = useState([]);
 </div>
         </div>
       )}
+      {tab === 'reports' && (
+        <div className="space-y-6">
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
+            <h3 className="text-lg font-extrabold text-slate-900 mb-4">📊 التقارير</h3>
+            <div className="flex flex-wrap gap-2 mb-5">
+              {[
+                { id: 'students', label: 'تقرير الطلاب' },
+                { id: 'teachers', label: 'تقرير المعلمين' },
+                { id: 'subjects', label: 'تقرير المواد' },
+                { id: 'exams', label: 'تقرير الاختبارات' },
+                { id: 'revenue', label: 'تقرير الإيرادات' },
+                { id: 'activity', label: 'تقرير النشاط' },
+                { id: 'export', label: 'تصدير' },
+              ].map((s) => (
+                <button key={s.id} onClick={() => { setReportTab(s.id); if (s.id !== 'export') loadReport(s.id); }} className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${reportTab === s.id ? 'bg-violet-600 text-white shadow-md' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                  {s.label}
+                </button>
+              ))}
+            </div>
+            <div className="flex flex-wrap items-end gap-3 mb-5">
+              <div>
+                <label className="text-xs text-slate-400 font-bold block mb-1">من تاريخ</label>
+                <input type="date" value={reportFrom} onChange={(e) => setReportFrom(e.target.value)} className="px-4 py-2.5 rounded-xl border border-slate-200 text-sm" dir="ltr" />
+              </div>
+              <div>
+                <label className="text-xs text-slate-400 font-bold block mb-1">إلى تاريخ</label>
+                <input type="date" value={reportTo} onChange={(e) => setReportTo(e.target.value)} className="px-4 py-2.5 rounded-xl border border-slate-200 text-sm" dir="ltr" />
+              </div>
+              {reportTab !== 'export' && (
+                <button onClick={() => loadReport(reportTab)} className="bg-violet-600 text-white font-extrabold px-6 py-2.5 rounded-xl hover:bg-violet-700 transition-colors text-sm">عرض</button>
+              )}
+            </div>
+          </div>
+
+          {reportTab === 'students' && (
+            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-x-auto">
+              <table className="w-full text-sm min-w-[800px]">
+                <thead className="bg-slate-50 text-slate-500 text-xs">
+                  <tr>
+                    <th className="text-right px-6 py-4">الاسم</th>
+                    <th className="text-right px-6 py-4">البريد</th>
+                    <th className="text-right px-6 py-4">الصف</th>
+                    <th className="text-right px-6 py-4">النقاط</th>
+                    <th className="text-right px-6 py-4">الدروس المكتملة</th>
+                    <th className="text-right px-6 py-4">متوسط الدرجات</th>
+                    <th className="text-right px-6 py-4">آخر نشاط</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reportData.map((r, i) => (
+                    <tr key={i} className="border-t border-slate-100">
+                      <td className="px-6 py-4 font-bold text-slate-800">{r.name}</td>
+                      <td className="px-6 py-4 text-slate-500" dir="ltr">{r.email}</td>
+                      <td className="px-6 py-4 text-slate-600">{r.grade ?? '—'}</td>
+                      <td className="px-6 py-4 font-black text-amber-600">{r.points}</td>
+                      <td className="px-6 py-4 text-slate-600">{r.lessons_completed ?? 0}</td>
+                      <td className="px-6 py-4 text-slate-600">{r.avg_score != null ? `${r.avg_score}%` : '—'}</td>
+                      <td className="px-6 py-4 text-xs text-slate-400" dir="ltr">{r.last_active ?? '—'}</td>
+                    </tr>
+                  ))}
+                  {reportData.length === 0 && <tr><td colSpan="7" className="text-center py-8 text-slate-400">لا توجد بيانات.</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {reportTab === 'teachers' && (
+            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-x-auto">
+              <table className="w-full text-sm min-w-[700px]">
+                <thead className="bg-slate-50 text-slate-500 text-xs">
+                  <tr>
+                    <th className="text-right px-6 py-4">الاسم</th>
+                    <th className="text-right px-6 py-4">البريد</th>
+                    <th className="text-right px-6 py-4">الدروس المنشأة</th>
+                    <th className="text-right px-6 py-4">الاختبارات المنشأة</th>
+                    <th className="text-right px-6 py-4">الطلاب المُدرَّسون</th>
+                    <th className="text-right px-6 py-4">متوسط درجات الطلاب</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reportData.map((r, i) => (
+                    <tr key={i} className="border-t border-slate-100">
+                      <td className="px-6 py-4 font-bold text-slate-800">{r.name}</td>
+                      <td className="px-6 py-4 text-slate-500" dir="ltr">{r.email}</td>
+                      <td className="px-6 py-4 text-slate-600">{r.lessons_created ?? 0}</td>
+                      <td className="px-6 py-4 text-slate-600">{r.exams_created ?? 0}</td>
+                      <td className="px-6 py-4 text-slate-600">{r.students_taught ?? 0}</td>
+                      <td className="px-6 py-4 text-slate-600">{r.avg_student_score != null ? `${r.avg_student_score}%` : '—'}</td>
+                    </tr>
+                  ))}
+                  {reportData.length === 0 && <tr><td colSpan="6" className="text-center py-8 text-slate-400">لا توجد بيانات.</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {reportTab === 'subjects' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {reportData.map((r, i) => (
+                <div key={i} className="bg-white rounded-3xl border border-slate-100 shadow-sm p-5">
+                  <p className="font-extrabold text-slate-900 mb-2">{r.subject_name}</p>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div className="bg-blue-50 rounded-xl p-3 text-center"><p className="font-black text-blue-700 text-lg">{r.student_count ?? 0}</p><p className="text-xs text-slate-500">طالب</p></div>
+                    <div className="bg-violet-50 rounded-xl p-3 text-center"><p className="font-black text-violet-700 text-lg">{r.lesson_count ?? 0}</p><p className="text-xs text-slate-500">درس</p></div>
+                    <div className="bg-emerald-50 rounded-xl p-3 text-center"><p className="font-black text-emerald-700 text-lg">{r.exam_count ?? 0}</p><p className="text-xs text-slate-500">اختبار</p></div>
+                    <div className="bg-amber-50 rounded-xl p-3 text-center"><p className="font-black text-amber-700 text-lg">{r.avg_score != null ? `${r.avg_score}%` : '—'}</p><p className="text-xs text-slate-500">متوسط الدرجات</p></div>
+                  </div>
+                </div>
+              ))}
+              {reportData.length === 0 && <p className="text-slate-400 text-center py-10 col-span-2">لا توجد بيانات.</p>}
+            </div>
+          )}
+
+          {reportTab === 'exams' && (
+            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-x-auto">
+              <table className="w-full text-sm min-w-[700px]">
+                <thead className="bg-slate-50 text-slate-500 text-xs">
+                  <tr>
+                    <th className="text-right px-6 py-4">الاختبار</th>
+                    <th className="text-right px-6 py-4">المادة</th>
+                    <th className="text-right px-6 py-4">المحاولات</th>
+                    <th className="text-right px-6 py-4">متوسط الدرجات</th>
+                    <th className="text-right px-6 py-4">نسبة النجاح</th>
+                    <th className="text-right px-6 py-4">الأعلى</th>
+                    <th className="text-right px-6 py-4">الأدنى</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reportData.map((r, i) => (
+                    <tr key={i} className="border-t border-slate-100">
+                      <td className="px-6 py-4 font-bold text-slate-800">{r.title}</td>
+                      <td className="px-6 py-4 text-slate-500">{r.subject}</td>
+                      <td className="px-6 py-4 text-slate-600">{r.attempts ?? 0}</td>
+                      <td className="px-6 py-4 text-slate-600">{r.avg_score != null ? `${r.avg_score}%` : '—'}</td>
+                      <td className="px-6 py-4 text-slate-600">{r.pass_rate != null ? `${r.pass_rate}%` : '—'}</td>
+                      <td className="px-6 py-4 font-bold text-green-700">{r.highest ?? '—'}</td>
+                      <td className="px-6 py-4 font-bold text-red-600">{r.lowest ?? '—'}</td>
+                    </tr>
+                  ))}
+                  {reportData.length === 0 && <tr><td colSpan="7" className="text-center py-8 text-slate-400">لا توجد بيانات.</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {reportTab === 'revenue' && (
+            <div className="space-y-5">
+              {reportData.summary && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 text-center">
+                    <p className="text-xs text-slate-400 font-bold">الإيراد الإجمالي</p>
+                    <p className="text-3xl font-black text-green-700">{reportData.summary.total ?? 0} ر.ع</p>
+                  </div>
+                  <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 text-center">
+                    <p className="text-xs text-slate-400 font-bold">متوسط شهري</p>
+                    <p className="text-3xl font-black text-violet-700">{reportData.summary.monthly_avg ?? 0} ر.ع</p>
+                  </div>
+                </div>
+              )}
+              <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-x-auto">
+                <table className="w-full text-sm min-w-[600px]">
+                  <thead className="bg-slate-50 text-slate-500 text-xs">
+                    <tr>
+                      <th className="text-right px-6 py-4">الشهر</th>
+                      <th className="text-right px-6 py-4">الإجمالي (ر.ع)</th>
+                      <th className="text-right px-6 py-4">تفصيل المواد</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {reportData.months && reportData.months.map((r, i) => (
+                      <tr key={i} className="border-t border-slate-100">
+                        <td className="px-6 py-4 font-bold text-slate-800" dir="ltr">{r.month}</td>
+                        <td className="px-6 py-4 font-black text-green-700">{r.total ?? 0} ر.ع</td>
+                        <td className="px-6 py-4 text-slate-500 text-xs">{r.by_subject ?? '—'}</td>
+                      </tr>
+                    ))}
+                    {(!reportData.months || reportData.months.length === 0) && <tr><td colSpan="3" className="text-center py-8 text-slate-400">لا توجد بيانات.</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {reportTab === 'activity' && (
+            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-x-auto">
+              <table className="w-full text-sm min-w-[600px]">
+                <thead className="bg-slate-50 text-slate-500 text-xs">
+                  <tr>
+                    <th className="text-right px-6 py-4">التاريخ</th>
+                    <th className="text-right px-6 py-4">المستخدمون النشطون</th>
+                    <th className="text-right px-6 py-4">التسجيلات الجديدة</th>
+                    <th className="text-right px-6 py-4">الدروس المكتملة</th>
+                    <th className="text-right px-6 py-4">الاختبارات المتخذة</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reportData.map((r, i) => (
+                    <tr key={i} className="border-t border-slate-100">
+                      <td className="px-6 py-4 font-bold text-slate-800" dir="ltr">{r.date}</td>
+                      <td className="px-6 py-4 text-slate-600">{r.active_users ?? 0}</td>
+                      <td className="px-6 py-4 text-slate-600">{r.signups ?? 0}</td>
+                      <td className="px-6 py-4 text-slate-600">{r.lessons_completed ?? 0}</td>
+                      <td className="px-6 py-4 text-slate-600">{r.exams_taken ?? 0}</td>
+                    </tr>
+                  ))}
+                  {reportData.length === 0 && <tr><td colSpan="5" className="text-center py-8 text-slate-400">لا توجد بيانات.</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {reportTab === 'export' && (
+            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
+              <h4 className="font-extrabold text-slate-900 mb-5">📥 تصدير التقارير كملف CSV</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {[
+                  { type: 'students', label: 'تقرير الطلاب', icon: '🎓' },
+                  { type: 'teachers', label: 'تقرير المعلمين', icon: '👨‍🏫' },
+                  { type: 'subjects', label: 'تقرير المواد', icon: '📚' },
+                  { type: 'exams', label: 'تقرير الاختبارات', icon: '📝' },
+                  { type: 'revenue', label: 'تقرير الإيرادات', icon: '💰' },
+                  { type: 'activity', label: 'تقرير النشاط', icon: '📈' },
+                ].map((r) => (
+                  <button key={r.type} onClick={async () => { try { const params = new URLSearchParams(); if (reportFrom) params.set('from_date', reportFrom); if (reportTo) params.set('to_date', reportTo); const q = params.toString(); const data = await api.get(`/admin/reports/${r.type}${q ? '?' + q : ''}`); const rows = Array.isArray(data) ? data : (data.months || []); downloadCSV(rows, `${r.type}_report.csv`); } catch (e) { setError(e.message); } }} className="flex items-center gap-3 bg-slate-50 hover:bg-slate-100 rounded-2xl px-5 py-4 transition-colors border border-slate-200">
+                    <span className="text-2xl">{r.icon}</span>
+                    <div className="text-right">
+                      <p className="font-bold text-slate-800 text-sm">{r.label}</p>
+                      <p className="text-xs text-slate-400">تحميل CSV</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === 'audit' && (
+        <div className="space-y-5">
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
+            <h3 className="text-lg font-extrabold text-slate-900 mb-4">📋 سجل العمليات</h3>
+            <div className="flex flex-wrap items-end gap-3 mb-5">
+              <div>
+                <label className="text-xs text-slate-400 font-bold block mb-1">نوع العملية</label>
+                <select value={auditAction} onChange={(e) => setAuditAction(e.target.value)} className="px-4 py-2.5 rounded-xl border border-slate-200 text-sm">
+                  <option value="">كل العمليات</option>
+                  <option value="create">إنشاء</option>
+                  <option value="update">تعديل</option>
+                  <option value="delete">حذف</option>
+                  <option value="approve">موافقة</option>
+                  <option value="reject">رفض</option>
+                  <option value="login">تسجيل دخول</option>
+                  <option value="export">تصدير</option>
+                </select>
+              </div>
+              <button onClick={() => { setAuditPage(1); loadAuditLog(); }} className="bg-violet-600 text-white font-extrabold px-6 py-2.5 rounded-xl hover:bg-violet-700 transition-colors text-sm">عرض</button>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-x-auto">
+            <table className="w-full text-sm min-w-[700px]">
+              <thead className="bg-slate-50 text-slate-500 text-xs">
+                <tr>
+                  <th className="text-right px-6 py-4">التاريخ والوقت</th>
+                  <th className="text-right px-6 py-4">المستخدم</th>
+                  <th className="text-right px-6 py-4">الدور</th>
+                  <th className="text-right px-6 py-4">العملية</th>
+                  <th className="text-right px-6 py-4">نوع الكيان</th>
+                  <th className="text-right px-6 py-4">معرف الكيان</th>
+                </tr>
+              </thead>
+              <tbody>
+                {auditLog.map((entry, i) => (
+                  <tr key={i} className="border-t border-slate-100">
+                    <td className="px-6 py-4 text-slate-500 text-xs" dir="ltr">{entry.created_at || entry.date}</td>
+                    <td className="px-6 py-4 font-bold text-slate-800">{entry.user_name || '—'}</td>
+                    <td className="px-6 py-4"><span className={`px-2.5 py-1 rounded-full text-xs font-black ${entry.role === 'admin' ? 'bg-red-100 text-red-700' : entry.role === 'teacher' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>{entry.role || '—'}</span></td>
+                    <td className="px-6 py-4"><span className="px-2.5 py-1 rounded-full text-xs font-black bg-violet-100 text-violet-700">{entry.action}</span></td>
+                    <td className="px-6 py-4 text-slate-600">{entry.entity_type || '—'}</td>
+                    <td className="px-6 py-4 text-slate-500" dir="ltr">{entry.entity_id || '—'}</td>
+                  </tr>
+                ))}
+                {auditLog.length === 0 && <tr><td colSpan="6" className="text-center py-8 text-slate-400">لا توجد سجلات.</td></tr>}
+              </tbody>
+            </table>
+          </div>
+
+          {auditTotal > 20 && (
+            <div className="flex items-center justify-center gap-4">
+              <button onClick={() => { if (auditPage > 1) { setAuditPage((p) => p - 1); loadAuditLog(); } }} disabled={auditPage <= 1} className={`px-5 py-2.5 rounded-xl font-bold text-sm ${auditPage <= 1 ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-white border border-slate-200 text-slate-600 hover:border-violet-300'}`}>السابق</button>
+              <span className="text-sm text-slate-500 font-bold">صفحة {auditPage} / {Math.ceil(auditTotal / 20)}</span>
+              <button onClick={() => { if (auditPage < Math.ceil(auditTotal / 20)) { setAuditPage((p) => p + 1); loadAuditLog(); } }} disabled={auditPage >= Math.ceil(auditTotal / 20)} className={`px-5 py-2.5 rounded-xl font-bold text-sm ${auditPage >= Math.ceil(auditTotal / 20) ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-white border border-slate-200 text-slate-600 hover:border-violet-300'}`}>التالي</button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === 'teachers' && (
+        <div className="space-y-5">
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
+            <h3 className="text-lg font-extrabold text-slate-900 mb-5">👨‍🏫 إدارة المعلمين</h3>
+            <p className="text-xs text-slate-400 mb-4">تحديد المواد المخصصة لكل معلم وتفعيل/تعطيل الحساب.</p>
+            <div className="space-y-3">
+              {teacherList.map((t) => (
+                <div key={t.id} className="border border-slate-100 rounded-2xl px-5 py-4">
+                  <div className="flex items-center justify-between gap-3 mb-3">
+                    <div>
+                      <p className="font-extrabold text-slate-900">{t.name}</p>
+                      <p className="text-xs text-slate-400" dir="ltr">{t.email} • {(t.subject_names || []).join(', ') || 'بدون مواد'}</p>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <label className="flex items-center gap-2 text-sm font-bold text-slate-700 cursor-pointer">
+                        <input type="checkbox" checked={t.enabled !== 0} onChange={(e) => toggleTeacher(t.id, e.target.checked)} className="w-5 h-5 accent-violet-600" />
+                        {t.enabled !== 0 ? 'مفعّل' : 'معطّل'}
+                      </label>
+                      <button onClick={() => setEditingTeacherSubjects(editingTeacherSubjects === t.id ? null : t.id)} className="bg-slate-100 text-slate-700 text-xs font-black px-4 py-2 rounded-xl hover:bg-slate-200">
+                        {editingTeacherSubjects === t.id ? 'إغلاق' : 'إدارة المواد'}
+                      </button>
+                    </div>
+                  </div>
+                  {editingTeacherSubjects === t.id && (
+                    <div className="border-t border-slate-100 pt-3 mt-2">
+                      <p className="text-xs text-slate-400 font-bold mb-2">تحديد المواد:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {allSubjects.map((s) => {
+                          const assigned = (t.subject_ids || []).includes(s.id);
+                          return (
+                            <button key={s.id} onClick={() => toggleTeacherSubject(t.id, s.id)} className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${assigned ? 'bg-violet-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                              {s.icon} {s.name}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+              {teacherList.length === 0 && <p className="text-slate-400 text-center py-8">لا يوجد معلمون.</p>}
+            </div>
+          </div>
+        </div>
+      )}
+
       {tab === 'settings' && (
         <div className="space-y-5">
           <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6">

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../api/client';
-import { Loading, EmptyState, Badge, difficultyColor, Alert, LockedContent } from '../components/common';
+import { Loading, EmptyState, Badge, difficultyColor, Alert, LockedContent, Breadcrumbs } from '../components/common';
 import { useAuth } from '../context/AuthContext';
 
 const YT_REGEX = /(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([\w-]{6,})/;
@@ -18,6 +18,8 @@ export default function LessonDetail() {
   const [favorited, setFavorited] = useState(false);
   const [earnedPoints, setEarnedPoints] = useState(null);
   const [message, setMessage] = useState('');
+  const [notes, setNotes] = useState('');
+  const [savingNotes, setSavingNotes] = useState(false);
   const videoRef = useRef(null);
   const lastSaveRef = useRef(0);
 
@@ -96,7 +98,11 @@ export default function LessonDetail() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-10">
-      <Link to={`/subjects/${lesson.subject_id}`} className="text-violet-600 text-sm hover:text-violet-800 mb-4 inline-block">→ مادة {lesson.subject_name}</Link>
+      <Breadcrumbs items={[
+        { label: 'المواد', href: '/subjects' },
+        { label: lesson.subject_name, href: `/subjects/${lesson.subject_id}` },
+        { label: lesson.title }
+      ]} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
@@ -183,6 +189,32 @@ export default function LessonDetail() {
               ))}
             </ul>
           </div>
+
+          {user && (
+            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-7 mt-6">
+              <h2 className="text-xl font-extrabold text-slate-900 mb-4">📝 ملاحظاتي على هذا الدرس</h2>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="اكتب ملاحظاتك هنا... مثال: أعد مراجعة قسم الاشتقاق مرة أخرى"
+                rows={4}
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-violet-400 text-sm resize-none"
+              />
+              <div className="flex items-center justify-between mt-3">
+                <p className="text-xs text-slate-400">{notes.length}/500 حرف</p>
+                <button
+                  onClick={() => {
+                    setSavingNotes(true);
+                    setTimeout(() => setSavingNotes(false), 800);
+                  }}
+                  disabled={savingNotes}
+                  className="bg-violet-600 text-white font-bold px-5 py-2 rounded-xl text-sm hover:bg-violet-700 transition-colors disabled:opacity-50"
+                >
+                  {savingNotes ? 'جارٍ الحفظ...' : '💾 حفظ الملاحظات'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         <aside className="space-y-5">

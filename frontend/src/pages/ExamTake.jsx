@@ -141,6 +141,16 @@ export default function ExamTake() {
 
       {error && <div className="mb-5"><Alert>{error}</Alert></div>}
 
+      <div className="bg-white rounded-full h-2 overflow-hidden mb-6 shadow-sm">
+        <div
+          className="h-full rounded-full transition-all duration-300"
+          style={{
+            width: `${(answered / data.questions.length) * 100}%`,
+            background: answered === data.questions.length ? '#10b981' : '#7c3aed'
+          }}
+        />
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <div className="lg:col-span-3">
           <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8">

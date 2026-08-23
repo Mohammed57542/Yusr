@@ -7,16 +7,11 @@ export default function About() {
   useEffect(() => { api.get('/stats').then(setStats).catch(() => {}); }, []);
 
   const nums = stats ? [
-    { v: stats.students.toLocaleString('ar-EG'), l: 'طالب متفوق' },
     { v: stats.lessons, l: 'درس مصوّر' },
     { v: stats.subjects, l: 'مادة دراسية' },
     { v: stats.grades, l: 'صفوف دراسية' },
-  ] : [
-    { v: '+12,000', l: 'طالب متفوق' },
-    { v: '+100', l: 'درس مصوّر' },
-    { v: '9', l: 'مواد دراسية' },
-    { v: '5', l: 'صفوف دراسية' },
-  ];
+    { v: stats.questions, l: 'سؤال في البنك' },
+  ] : [];
 
   return (
     <div>
@@ -58,14 +53,16 @@ export default function About() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-5 mb-20">
-          {nums.map((s) => (
-            <div key={s.l} className="bg-white rounded-3xl border border-slate-100 shadow-sm p-7 text-center">
-              <p className="text-4xl font-black text-violet-700">{s.v}</p>
-              <p className="text-sm text-slate-500 font-medium mt-1">{s.l}</p>
-            </div>
-          ))}
-        </div>
+        {nums.length > 0 && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-5 mb-20">
+            {nums.map((s) => (
+              <div key={s.l} className="bg-white rounded-3xl border border-slate-100 shadow-sm p-7 text-center">
+                <p className="text-4xl font-black text-violet-700">{s.v}</p>
+                <p className="text-sm text-slate-500 font-medium mt-1">{s.l}</p>
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className="bg-gradient-to-l from-violet-600 to-purple-700 text-white rounded-[2rem] p-10 md:p-14 text-center">
           <h2 className="text-3xl md:text-4xl font-black mb-4">انضم إلى رحلة التفوق مع يُسر</h2>

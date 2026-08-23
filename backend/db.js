@@ -410,9 +410,219 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
   CREATE INDEX IF NOT EXISTS idx_user_subjects_user ON user_subjects(user_id);
   CREATE INDEX IF NOT EXISTS idx_user_subjects_subject ON user_subjects(subject_id);
-  CREATE INDEX IF NOT EXISTS idx_referrals_ambassador ON referrals(ambassador_id);
   CREATE INDEX IF NOT EXISTS idx_discussions_subject ON subject_discussions(subject_id);
 `);
+
+// Add new columns to exams table for advanced exam features
+const examCols = db.prepare("PRAGMA table_info(exams)").all().map((c) => c.name);
+if (!examCols.includes('max_attempts')) db.exec("ALTER TABLE exams ADD COLUMN max_attempts INTEGER DEFAULT 1");
+if (!examCols.includes('open_at')) db.exec("ALTER TABLE exams ADD COLUMN open_at TEXT");
+if (!examCols.includes('close_at')) db.exec("ALTER TABLE exams ADD COLUMN close_at TEXT");
+if (!examCols.includes('is_free')) db.exec("ALTER TABLE exams ADD COLUMN is_free INTEGER DEFAULT 0");
+if (!examCols.includes('show_results')) db.exec("ALTER TABLE exams ADD COLUMN show_results INTEGER DEFAULT 1");
+if (!examCols.includes('allow_review')) db.exec("ALTER TABLE exams ADD COLUMN allow_review INTEGER DEFAULT 1");
+if (!examCols.includes('created_by')) db.exec("ALTER TABLE exams ADD COLUMN created_by INTEGER");
+if (!examCols.includes('points_reward')) db.exec("ALTER TABLE exams ADD COLUMN points_reward INTEGER DEFAULT 20");
+
+// Add attempt tracking to exam_results
+const examResultCols = db.prepare("PRAGMA table_info(exam_results)").all().map((c) => c.name);
+if (!examResultCols.includes('started_at')) db.exec("ALTER TABLE exam_results ADD COLUMN started_at TEXT");
+if (!examResultCols.includes('time_spent')) db.exec("ALTER TABLE exam_results ADD COLUMN time_spent INTEGER DEFAULT 0");
+if (!examResultCols.includes('attempt_number')) db.exec("ALTER TABLE exam_results ADD COLUMN attempt_number INTEGER DEFAULT 1");
+
+// Add score column to questions for weighted grading
+const questionCols = db.prepare("PRAGMA table_info(questions)").all().map((c) => c.name);
+if (!questionCols.includes('points')) db.exec("ALTER TABLE questions ADD COLUMN points INTEGER DEFAULT 1");
+
+// Add duration to live_sessions
+const liveCols = db.prepare("PRAGMA table_info(live_sessions)").all().map((c) => c.name);
+if (!liveCols.includes('duration_minutes')) db.exec("ALTER TABLE live_sessions ADD COLUMN duration_minutes INTEGER DEFAULT 60");
+if (!liveCols.includes('is_subscribers_only')) db.exec("ALTER TABLE live_sessions ADD COLUMN is_subscribers_only INTEGER DEFAULT 0");
+if (!liveCols.includes('is_recorded')) db.exec("ALTER TABLE live_sessions ADD COLUMN is_recorded INTEGER DEFAULT 0");
+if (!liveCols.includes('created_by')) db.exec("ALTER TABLE live_sessions ADD COLUMN created_by INTEGER");
+if (!liveCols.includes('meeting_id')) db.exec("ALTER TABLE live_sessions ADD COLUMN meeting_id TEXT");
+if (!liveCols.includes('max_participants')) db.exec("ALTER TABLE live_sessions ADD COLUMN max_participants INTEGER DEFAULT 50");
+
+db.exec(`CREATE INDEX IF NOT EXISTS idx_exams_subject ON exams(subject_id);
+  CREATE INDEX IF NOT EXISTS idx_exams_grade ON exams(grade_id);
+  CREATE INDEX IF NOT EXISTS idx_exam_results_user ON exam_results(user_id);
+  CREATE INDEX IF NOT EXISTS idx_exam_results_exam ON exam_results(exam_id);`);
+
+// ========== جداول جديدة للنظام المتقدم ==========
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS teacher_subjects (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    teacher_id INTEGER NOT NULL,
+    subject_id INTEGER NOT NULL,
+    grade_id INTEGER,
+    created_at TEXT DEFAULT (datetime('now')),
+    UNIQUE(teacher_id, subject_id, grade_id),
+    FOREIGN KEY (teacher_id) REFERENCES users(id),
+    FOREIGN KEY (subject_id) REFERENCES subjects(id),
+    FOREIGN KEY (grade_id) REFERENCES grades(id)
+  );
+`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS lesson_status (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    lesson_id INTEGER NOT NULL UNIQUE,
+    status TEXT DEFAULT 'draft',
+    submitted_by INTEGER,
+    reviewed_by INTEGER,
+    submitted_at TEXT,
+    reviewed_at TEXT,
+    review_notes TEXT,
+    FOREIGN KEY (lesson_id) REFERENCES lessons(id),
+    FOREIGN KEY (submitted_by) REFERENCES users(id),
+    FOREIGN KEY (reviewed_by) REFERENCES users(id)
+  );
+`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS exam_status (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    exam_id INTEGER NOT NULL UNIQUE,
+    status TEXT DEFAULT 'draft',
+    submitted_by INTEGER,
+    reviewed_by INTEGER,
+    submitted_at TEXT,
+    reviewed_at TEXT,
+    review_notes TEXT,
+    FOREIGN KEY (exam_id) REFERENCES exams(id),
+    FOREIGN KEY (submitted_by) REFERENCES users(id),
+    FOREIGN KEY (reviewed_by) REFERENCES users(id)
+  );
+`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS badges (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    description TEXT,
+    icon TEXT,
+    points_required INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS user_badges (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    badge_id INTEGER NOT NULL,
+    earned_at TEXT DEFAULT (datetime('now')),
+    UNIQUE(user_id, badge_id),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (badge_id) REFERENCES badges(id)
+  );
+`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS levels (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    level INTEGER NOT NULL UNIQUE,
+    name TEXT NOT NULL,
+    points_required INTEGER NOT NULL,
+    icon TEXT
+  );
+`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS session_attendance (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    joined_at TEXT DEFAULT (datetime('now')),
+    left_at TEXT,
+    duration_seconds INTEGER DEFAULT 0,
+    UNIQUE(session_id, user_id),
+    FOREIGN KEY (session_id) REFERENCES live_sessions(id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  );
+`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS discussions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    lesson_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    parent_id INTEGER,
+    content TEXT NOT NULL,
+    is_reported INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (lesson_id) REFERENCES lessons(id),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (parent_id) REFERENCES discussions(id)
+  );
+`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS audit_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    user_name TEXT,
+    user_role TEXT,
+    action TEXT NOT NULL,
+    entity_type TEXT,
+    entity_id INTEGER,
+    old_value TEXT,
+    new_value TEXT,
+    ip_address TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  );
+`);
+
+db.exec(`
+  CREATE INDEX IF NOT EXISTS idx_teacher_subjects_teacher ON teacher_subjects(teacher_id);
+  CREATE INDEX IF NOT EXISTS idx_teacher_subjects_subject ON teacher_subjects(subject_id);
+  CREATE INDEX IF NOT EXISTS idx_lesson_status_lesson ON lesson_status(lesson_id);
+  CREATE INDEX IF NOT EXISTS idx_exam_status_exam ON exam_status(exam_id);
+  CREATE INDEX IF NOT EXISTS idx_user_badges_user ON user_badges(user_id);
+  CREATE INDEX IF NOT EXISTS idx_session_attendance_session ON session_attendance(session_id);
+  CREATE INDEX IF NOT EXISTS idx_discussions_lesson ON discussions(lesson_id);
+  CREATE INDEX IF NOT EXISTS idx_audit_log_user ON audit_log(user_id);
+  CREATE INDEX IF NOT EXISTS idx_audit_log_created ON audit_log(created_at);
+`);
+
+// إضافة أعمدة جديدة للموجود
+const lessonCols = db.prepare("PRAGMA table_info(lessons)").all().map((c) => c.name);
+if (!lessonCols.includes('created_by')) db.exec("ALTER TABLE lessons ADD COLUMN created_by INTEGER");
+if (!lessonCols.includes('status')) db.exec("ALTER TABLE lessons ADD COLUMN status TEXT DEFAULT 'published'");
+if (!lessonCols.includes('is_free')) db.exec("ALTER TABLE lessons ADD COLUMN is_free INTEGER DEFAULT 0");
+if (!lessonCols.includes('order_index')) db.exec("ALTER TABLE lessons ADD COLUMN order_index INTEGER DEFAULT 0");
+
+const userCols = db.prepare("PRAGMA table_info(users)").all().map((c) => c.name);
+if (!userCols.includes('avatar')) db.exec("ALTER TABLE users ADD COLUMN avatar TEXT");
+if (!userCols.includes('is_active')) db.exec("ALTER TABLE users ADD COLUMN is_active INTEGER DEFAULT 1");
+
+// بيانات المستوى الافتراضية
+const levelData = [
+  [1, 'مبتدئ', 0, '🌱'],
+  [2, 'متعلم', 100, '📚'],
+  [3, 'متوسط', 300, '⭐'],
+  [4, 'متقدم', 600, '🏆'],
+  [5, 'خبير', 1000, '👑'],
+  [6, 'محترف', 2000, '💎'],
+];
+const levelInsert = db.prepare('INSERT OR IGNORE INTO levels (level, name, points_required, icon) VALUES (?, ?, ?, ?)');
+for (const l of levelData) levelInsert.run(...l);
+
+// بيانات الشارات الافتراضية
+const badgeData = [
+  ['أول درس', 'أكمل أول درس', '🎬', 0],
+  ['محلل', 'حل أول اختبار', '📝', 0],
+  ['متفوق', 'حصل على 90% في اختبار', '🌟', 0],
+  [  'ملتزم', 'أكمل 10 دروس', '📚', 0],
+  ['خبير', 'أكمل 50 درس', '🏅', 0],
+  ['نجم', 'جمع 500 نقطة', '⭐', 500],
+  ['بطل', 'جمع 1000 نقطة', '🏆', 1000],
+  ['معلّم', 'أول درس كمعلم', '👨‍🏫', 0],
+];
+const badgeInsert = db.prepare('INSERT OR IGNORE INTO badges (name, description, icon, points_required) VALUES (?, ?, ?, ?)');
+for (const b of badgeData) badgeInsert.run(...b);
 
 // الإعدادات العامة الافتراضية (قابلة للتعديل من لوحة الإدارة)
 const DEFAULT_SETTINGS = {

@@ -8,12 +8,12 @@ const navItems = [
   { to: '/', label: 'الرئيسية' },
   { to: '/grades', label: 'المراحل' },
   { to: '/subjects', label: 'المواد' },
-  { to: '/live-sessions', label: 'الحصص' },
+  { to: '/live-sessions', label: 'البث المباشر' },
+  { to: '/recordings', label: 'التسجيلات' },
   { to: '/exams', label: 'الاختبارات' },
   { to: '/reviews', label: 'المراجعات' },
   { to: '/library', label: 'الملفات' },
   { to: '/groups', label: 'الجروبات المجانية' },
-  { to: '/ambassador', label: 'السفراء' },
   { to: '/pricing', label: 'الاشتراكات' },
 ];
 
@@ -221,21 +221,7 @@ function Header() {
   );
 }
 
-function WhatsAppButton() {
-  const settings = useSettings();
-  const wa = (settings.whatsapp_number) || DEFAULT_WHATSAPP;
-  return (
-    <a href={`https://wa.me/${wa}?text=${encodeURIComponent('مرحباً، أحتاج مساعدة في منصة يُسر')}`} target="_blank" rel="noreferrer"
-      className="fixed bottom-6 left-6 z-50 group flex items-center gap-3">
-      <span className="hidden group-hover:block bg-white border border-slate-200 shadow-xl rounded-2xl px-4 py-2.5 text-sm font-bold text-slate-700 animate-fade-up">
-        تحتاج مساعدة؟ تواصل مع خدمة عملاء يُسر
-      </span>
-      <span className="w-14 h-14 rounded-full bg-green-500 hover:bg-green-600 shadow-2xl shadow-green-300 flex items-center justify-center text-3xl transition-all hover:scale-110">
-        💬
-      </span>
-    </a>
-  );
-}
+
 
 function Footer() {
   const settings = useSettings();
@@ -269,7 +255,6 @@ function Footer() {
             <li><Link to="/exams" className="hover:text-violet-700">الاختبارات</Link></li>
             <li><Link to="/reviews" className="hover:text-violet-700">المراجعات</Link></li>
             <li><Link to="/groups" className="hover:text-violet-700">الجروبات المجانية</Link></li>
-            <li><Link to="/ambassador" className="hover:text-violet-700">برنامج السفراء</Link></li>
           </ul>
         </div>
         <div>
@@ -307,7 +292,6 @@ export default function Layout() {
       <Header />
       <main className="flex-1"><Outlet /></main>
       <Footer />
-      <WhatsAppButton />
     </div>
   );
 }

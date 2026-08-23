@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../api/client';
-import { Loading, EmptyState, SectionHeader } from '../components/common';
+import { Loading, EmptyState, SectionHeader, Breadcrumbs } from '../components/common';
 import useSettings, { waLink } from '../hooks/useSettings';
 
 function formatDate(dateStr) {
@@ -17,6 +17,27 @@ function dayNameOf(dateStr) {
   try {
     return new Date(`${dateStr}T00:00:00`).toLocaleDateString('ar-EG', { weekday: 'long' });
   } catch { return ''; }
+}
+
+function sessionStatus(s) {
+  if (!s.session_date || !s.session_time) return 'unknown';
+  const now = Date.now();
+  const start = new Date(`${s.session_date}T${s.session_time}`).getTime();
+  const durationMs = (s.duration || 60) * 60000;
+  if (now < start) return 'upcoming';
+  if (now >= start && now < start + durationMs) return 'live';
+  return 'ended';
+}
+
+function StatusBadge({ status }) {
+  const map = {
+    live: { label: 'مباشر', cls: 'bg-green-100 text-green-700' },
+    upcoming: { label: 'قادم', cls: 'bg-blue-100 text-blue-700' },
+    ended: { label: 'منتهية', cls: 'bg-slate-100 text-slate-500' },
+  };
+  const { label, cls } = map[status] || { label: '', cls: '' };
+  if (!label) return null;
+  return <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${cls}`}>{label}</span>;
 }
 
 function WeekSchedule({ sessions, settings }) {
@@ -83,6 +104,7 @@ export default function LiveSessions() {
     <div>
       <div className="bg-gradient-to-br from-violet-700 via-purple-800 to-indigo-900 text-white">
         <div className="max-w-7xl mx-auto px-4 py-16 text-center">
+          <Breadcrumbs items={[{ label: 'الحصص المباشرة' }]} />
           <span className="inline-block px-4 py-1.5 rounded-full bg-white/10 border border-white/20 text-sm font-bold mb-5">الحصص</span>
           <h1 className="text-4xl md:text-5xl font-black mb-4">الحصص المباشرة والمسجلة</h1>
           <p className="text-violet-200 text-lg max-w-2xl mx-auto">تعلّم مباشرة مع معلميك، واطرح أسئلتك، ولا تفوّت أي مراجعة.</p>
@@ -140,7 +162,7 @@ export default function LiveSessions() {
                 <div className="p-6">
                   <div className="flex items-center justify-between text-xs text-slate-400 mb-2">
                     <span>{s.subject_name} • {s.grade_name}</span>
-                    {tab === 'upcoming' && <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-600 font-bold">مباشر</span>}
+                    <StatusBadge status={sessionStatus(s)} />
                   </div>
                   <h3 className="font-extrabold text-slate-900 leading-6 mb-3">{s.title}</h3>
                   <p className="text-sm text-slate-500 mb-5">👨‍🏫 {s.teacher_name}</p>
@@ -150,11 +172,7 @@ export default function LiveSessions() {
                   </div>
                   {tab === 'upcoming' ? (
                     <div className="flex gap-2">
-                      {s.meeting_url ? (
-                        <a href={s.meeting_url} target="_blank" rel="noreferrer" className="flex-1 text-center bg-violet-600 text-white font-extrabold py-3 rounded-xl hover:bg-violet-700 transition-colors">انضم الآن</a>
-                      ) : (
-                        <a href={waLink(`أرغب في الانضمام إلى حصة: ${s.title}`, settings)} target="_blank" rel="noreferrer" className="flex-1 text-center bg-green-600 text-white font-extrabold py-3 rounded-xl hover:bg-green-700 transition-colors">أضفني للحصة</a>
-                      )}
+                      <Link to={`/live/${s.id}`} className="flex-1 text-center bg-teal-600 text-white font-extrabold py-3 rounded-xl hover:bg-teal-700 transition-colors">انضم الآن</Link>
                       <Link to={`/lessons?subject=${s.subject_id}`} className="bg-slate-100 text-slate-600 font-bold px-4 py-3 rounded-xl hover:bg-slate-200 transition-colors">دروس المادة</Link>
                     </div>
                   ) : (

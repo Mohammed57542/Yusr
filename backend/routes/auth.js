@@ -12,6 +12,11 @@ function generateOtp() {
   return String(Math.floor(10000 + Math.random() * 90000));
 }
 
+function sanitize(str) {
+  if (typeof str !== 'string') return str;
+  return str.replace(/[<>]/g, '').trim().slice(0, 500);
+}
+
 router.post('/send-otp', (req, res) => {
   const { phone } = req.body;
   if (!phone) return res.status(400).json({ error: 'يرجى إدخال رقم الهاتف' });
@@ -35,10 +40,12 @@ router.post('/verify-otp', (req, res) => {
 });
 
 router.post('/register', (req, res) => {
-  const { name, phone, email, password, grade, otp, referral_code } = req.body;
+  const { name, phone, email, password, grade, otp } = req.body;
   if (!name || !phone || !email || !password) {
     return res.status(400).json({ error: 'الرجاء إدخال جميع الحقول المطلوبة' });
   }
+  const safeName = sanitize(name);
+  const safeEmail = sanitize(email).toLowerCase();
   if (!/^\d{8}$/.test(String(phone))) {
     return res.status(400).json({ error: 'رقم الهاتف يجب أن يكون 8 أرقام' });
   }
@@ -53,19 +60,12 @@ router.post('/register', (req, res) => {
     return res.status(400).json({ error: 'رمز التحقق غير صحيح' });
   }
   otpStore.delete(phone);
-  const exists = db.prepare('SELECT id FROM users WHERE email = ? OR phone = ?').get(email.toLowerCase(), phone);
+  const exists = db.prepare('SELECT id FROM users WHERE email = ? OR phone = ?').get(safeEmail, phone);
   if (exists) return res.status(409).json({ error: 'البريد الإلكتروني أو رقم الهاتف مسجل بالفعل' });
 
-  let referredBy = null;
-  if (referral_code && String(referral_code).trim()) {
-    const code = String(referral_code).trim().toUpperCase();
-    const amb = db.prepare('SELECT id FROM users WHERE referral_code = ?').get(code);
-    if (amb) referredBy = code;
-  }
-
   const hash = bcrypt.hashSync(password, 10);
-  const result = db.prepare('INSERT INTO users (name, email, phone, password, role, grade, referred_by) VALUES (?, ?, ?, ?, ?, ?, ?)')
-    .run(name, email.toLowerCase(), phone, hash, 'student', grade || null, referredBy);
+  const result = db.prepare('INSERT INTO users (name, email, phone, password, role, grade) VALUES (?, ?, ?, ?, ?, ?)')
+    .run(safeName, safeEmail, phone, hash, 'student', grade || null);
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid);
   delete user.password;
   res.status(201).json({ token: signToken(user), user });

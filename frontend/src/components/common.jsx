@@ -9,6 +9,64 @@ export function Loading({ label = 'جارٍ التحميل...' }) {
   );
 }
 
+export function Skeleton({ className = '' }) {
+  return <div className={`animate-pulse bg-slate-200 rounded-xl ${className}`} />;
+}
+
+export function SkeletonCard() {
+  return (
+    <div className="bg-white rounded-3xl border border-slate-100 p-6 animate-pulse">
+      <div className="flex items-center gap-4 mb-4">
+        <Skeleton className="w-14 h-14 rounded-2xl shrink-0" />
+        <div className="flex-1 space-y-2">
+          <Skeleton className="h-4 w-3/4" />
+          <Skeleton className="h-3 w-1/2" />
+        </div>
+      </div>
+      <Skeleton className="h-3 w-full mb-2" />
+      <Skeleton className="h-3 w-5/6" />
+    </div>
+  );
+}
+
+export function SkeletonLesson() {
+  return (
+    <div className="bg-white rounded-2xl border border-slate-100 p-5 animate-pulse">
+      <div className="flex items-center gap-4">
+        <Skeleton className="w-12 h-12 rounded-xl shrink-0" />
+        <div className="flex-1 space-y-2">
+          <Skeleton className="h-4 w-2/3" />
+          <Skeleton className="h-3 w-1/3" />
+        </div>
+        <Skeleton className="w-16 h-6 rounded-full shrink-0" />
+      </div>
+    </div>
+  );
+}
+
+export function SkeletonHero() {
+  return (
+    <div className="bg-gradient-to-br from-violet-500 via-violet-700 to-night py-20">
+      <div className="max-w-7xl mx-auto px-4 grid lg:grid-cols-2 gap-12 items-center">
+        <div className="space-y-4 animate-pulse">
+          <Skeleton className="h-6 w-48 bg-white/20" />
+          <Skeleton className="h-12 w-full bg-white/20" />
+          <Skeleton className="h-12 w-3/4 bg-white/20" />
+          <Skeleton className="h-5 w-full bg-white/10" />
+          <Skeleton className="h-5 w-5/6 bg-white/10" />
+          <div className="flex gap-3 pt-4">
+            <Skeleton className="h-12 w-40 bg-white/20 rounded-2xl" />
+            <Skeleton className="h-12 w-36 bg-white/10 rounded-2xl" />
+          </div>
+        </div>
+        <div className="hidden lg:block animate-pulse">
+          <Skeleton className="h-80 w-full bg-white/10 rounded-3xl" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // شاشة المحتوى المميز المقفل — تظهر عند محاولة الوصول لمحتوى بدون اشتراك
 export function LockedContent({ subjectName = '', icon = '🔒', note }) {
   return (
@@ -108,5 +166,23 @@ export function Stat({ icon, value, label }) {
       <div className="text-3xl font-black text-slate-900">{value}</div>
       <div className="text-sm text-slate-500 font-medium">{label}</div>
     </div>
+  );
+}
+
+export function Breadcrumbs({ items = [] }) {
+  return (
+    <nav className="flex items-center gap-2 text-sm text-slate-500 mb-6 flex-wrap">
+      <a href="/" className="hover:text-violet-600 transition-colors">🏠 الرئيسية</a>
+      {items.map((item, i) => (
+        <span key={i} className="flex items-center gap-2">
+          <span className="text-slate-300">←</span>
+          {item.href ? (
+            <a href={item.href} className="hover:text-violet-600 transition-colors">{item.label}</a>
+          ) : (
+            <span className="text-slate-800 font-medium">{item.label}</span>
+          )}
+        </span>
+      ))}
+    </nav>
   );
 }

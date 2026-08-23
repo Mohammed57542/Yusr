@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api/client';
-import { Loading } from '../components/common';
 import useSettings, { waLink } from '../hooks/useSettings';
 
 export default function Groups() {
@@ -38,7 +37,27 @@ export default function Groups() {
         </div>
 
         {loading ? (
-          <Loading />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {[1, 2].map((i) => (
+              <div key={i} className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8 flex flex-col md:flex-row items-center gap-6 animate-pulse">
+                <div className="w-20 h-20 rounded-3xl bg-slate-200 shrink-0" />
+                <div className="flex-1 text-center md:text-right">
+                  <div className="h-5 w-32 bg-slate-200 rounded mb-2 mx-auto md:mx-0" />
+                  <div className="h-3 w-48 bg-slate-100 rounded mb-2 mx-auto md:mx-0" />
+                  <div className="h-2 w-24 bg-slate-100 rounded mx-auto md:mx-0" />
+                </div>
+                <div className="w-28 h-12 bg-slate-200 rounded-2xl shrink-0" />
+              </div>
+            ))}
+          </div>
+        ) : groups.length === 0 ? (
+          <div className="text-center py-20 px-4">
+            <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-slate-100 flex items-center justify-center">
+              <svg className="w-8 h-8 text-gray-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><line x1="4.93" y1="4.93" x2="19.07" y2="19.07" /></svg>
+            </div>
+            <h3 className="text-gray-500 text-lg font-bold mb-2">لا توجد مجموعات متاحة</h3>
+            <p className="text-gray-400 text-sm">المجموعات ستكون متاحة قريباً</p>
+          </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {groups.map((g, i) => (

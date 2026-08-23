@@ -98,7 +98,17 @@ router.get('/exams', optionalAuth, (req, res) => {
   if (exam_type) { where.push('e.exam_type = ?'); params.push(exam_type); }
   if (where.length) sql += ' WHERE ' + where.join(' AND ');
   sql += ' ORDER BY e.created_at DESC';
-  res.json(withLockFlag(db.prepare(sql).all(...params), req.user));
+  const exams = withLockFlag(db.prepare(sql).all(...params), req.user);
+
+  if (req.user) {
+    const enriched = exams.map((e) => {
+      const attempts = db.prepare('SELECT COUNT(*) c FROM exam_results WHERE user_id = ? AND exam_id = ?').get(req.user.id, e.id).c;
+      const bestScore = db.prepare('SELECT MAX(score) s FROM exam_results WHERE user_id = ? AND exam_id = ?').get(req.user.id, e.id).s;
+      return { ...e, attempts_used: attempts, best_score: bestScore };
+    });
+    return res.json(enriched);
+  }
+  res.json(exams);
 });
 
 router.get('/exams/:id', optionalAuth, requireSubjectAccess((req) => {
@@ -133,7 +143,7 @@ router.get('/exams/:id', optionalAuth, requireSubjectAccess((req) => {
 });
 
 router.post('/exams/:id/submit', optionalAuth, (req, res) => {
-  const { answers } = req.body;
+  const { answers, time_spent } = req.body;
   const exam = db.prepare('SELECT * FROM exams WHERE id = ?').get(Number(req.params.id));
   if (!exam) return res.status(404).json({ error: 'الاختبار غير موجود' });
   if (!canAccessSubject(req.user ?? null, exam.subject_id)) {
@@ -141,7 +151,19 @@ router.post('/exams/:id/submit', optionalAuth, (req, res) => {
     return res.status(403).json({ error: `المحتوى مميز — تحتاج اشتراكاً في مادة ${subject?.name ?? ''} للوصول إليه`, locked: true, subject_id: exam.subject_id });
   }
 
-  // معرفات أسئلة هذا الاختبار فقط — تُرفض أي إجابة خارجه
+  if (req.user) {
+    const attemptCount = db.prepare('SELECT COUNT(*) c FROM exam_results WHERE user_id = ? AND exam_id = ?').get(req.user.id, exam.id).c;
+    if (attemptCount >= exam.max_attempts) {
+      return res.status(403).json({ error: `لقد استنفدت جميع المحاولات المسموحة (${exam.max_attempts})` });
+    }
+    if (exam.open_at && new Date() < new Date(exam.open_at)) {
+      return res.status(403).json({ error: 'لم يفتح الاختبار بعد' });
+    }
+    if (exam.close_at && new Date() > new Date(exam.close_at)) {
+      return res.status(403).json({ error: 'انتهى وقت الاختبار' });
+    }
+  }
+
   const examQuestionIds = exam.unit_id
     ? db.prepare(`
         SELECT q.id FROM questions q
@@ -184,20 +206,27 @@ router.post('/exams/:id/submit', optionalAuth, (req, res) => {
   const total = detailed.length;
   const percentage = total ? Math.round((score / total) * 100) : 0;
 
-  // الحفظ يتم من هوية الجلسة فقط — لا نقبل user_id من العميل
   let points = 0;
+  let attempt_number = 1;
   if (req.user) {
-    // منح النقاط مرة واحدة فقط لكل اختبار — يمنع تكرار التقديم لتجميع النقاط
-    const previous = db.prepare('SELECT id FROM exam_results WHERE user_id = ? AND exam_id = ?').get(req.user.id, exam.id);
-    db.prepare('INSERT INTO exam_results (user_id, exam_id, score, total, answers) VALUES (?, ?, ?, ?, ?)')
-      .run(req.user.id, exam.id, percentage, total, JSON.stringify(detailed));
-    if (!previous) {
-      points = 20 + (percentage >= 80 ? 30 : 0);
+    const attemptCount = db.prepare('SELECT COUNT(*) c FROM exam_results WHERE user_id = ? AND exam_id = ?').get(req.user.id, exam.id).c;
+    attempt_number = attemptCount + 1;
+    db.prepare('INSERT INTO exam_results (user_id, exam_id, score, total, answers, started_at, time_spent, attempt_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+      .run(req.user.id, exam.id, percentage, total, JSON.stringify(detailed), new Date().toISOString(), time_spent || 0, attempt_number);
+    if (attempt_number === 1) {
+      points = (exam.points_reward || 20) + (percentage >= 80 ? 30 : 0);
       db.prepare('UPDATE users SET points = points + ? WHERE id = ?').run(points, req.user.id);
-      db.prepare('INSERT INTO points_log (user_id, points, reason) VALUES (?, ?, ?)').run(req.user.id, points, 'حل اختبار');
+      db.prepare('INSERT INTO points_log (user_id, points, reason) VALUES (?, ?, ?)').run(req.user.id, points, `حل اختبار: ${exam.title}`);
     }
   }
-  res.json({ score: percentage, correct: score, total, detailed, saved: !!req.user, points });
+  res.json({
+    score: percentage, correct: score, total, detailed,
+    saved: !!req.user, points, attempt_number,
+    show_results: exam.show_results,
+    allow_review: exam.allow_review,
+    max_attempts: exam.max_attempts,
+    attempts_used: attempt_number,
+  });
 });
 
 router.get('/users/:id/results', requireAuth, (req, res) => {

@@ -4,13 +4,14 @@ import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { Loading, EmptyState } from '../components/common';
 
-const ICONS = { session: '🔔', exam: '📝', resource: '📖', offer: '🎁', subscription: '✅', info: 'ℹ️' };
+const ICONS = { session: '🔔', exam: '📝', resource: '📖', offer: '🎁', subscription: '✅', info: 'ℹ️', points: '🏅', system: '⚙️' };
 
 export default function Notifications() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [notifs, setNotifs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState('all');
 
   useEffect(() => {
     if (authLoading) return;
@@ -29,6 +30,7 @@ export default function Notifications() {
   if (loading) return <Loading />;
 
   const unread = notifs.filter((n) => !n.read).length;
+  const filtered = filter === 'all' ? notifs : filter === 'unread' ? notifs.filter((n) => !n.read) : notifs.filter((n) => n.type === filter);
 
   const formatDate = (iso) => (iso ? String(iso).replace('T', ' ').slice(0, 16) : '');
 
@@ -42,11 +44,28 @@ export default function Notifications() {
         {unread > 0 && <button onClick={readAll} className="bg-violet-600 text-white font-bold px-5 py-2.5 rounded-xl text-sm hover:bg-violet-700 transition-colors">تحديد الكل كمقروء</button>}
       </div>
 
+      <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+        {[
+          { id: 'all', label: `الكل (${notifs.length})` },
+          { id: 'unread', label: `غير مقروء (${unread})` },
+          { id: 'exam', label: '📝 اختبارات' },
+          { id: 'session', label: '🔔 حصص' },
+          { id: 'points', label: '🏅 نقاط' },
+          { id: 'offer', label: '🎁 عروض' },
+        ].map((f) => (
+          <button key={f.id} onClick={() => setFilter(f.id)} className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-colors ${filter === f.id ? 'bg-violet-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:border-violet-300'}`}>
+            {f.label}
+          </button>
+        ))}
+      </div>
+
       {notifs.length === 0 ? (
         <EmptyState icon="🔔" title="لا توجد إشعارات" description="ستصلك تنبيهات الحصص والاختبارات والملفات الجديدة هنا" />
+      ) : filtered.length === 0 ? (
+        <EmptyState icon="✅" title="لا إشعارات في هذا التصنيف" description="جميع إشعاراتك مقروءة في هذا التصنيف" />
       ) : (
         <div className="space-y-3">
-          {notifs.map((n) => (
+          {filtered.map((n) => (
             <div key={n.id} className={`bg-white rounded-3xl border p-5 flex items-start gap-4 transition-all ${n.read ? 'border-slate-100 opacity-70' : 'border-violet-200 shadow-md'}`}>
               <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shrink-0 ${n.read ? 'bg-slate-100' : 'bg-violet-100'}`}>
                 {ICONS[n.type] || 'ℹ️'}

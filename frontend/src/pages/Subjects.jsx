@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client';
-import { Loading, SectionHeader } from '../components/common';
+import { Loading, SectionHeader, Breadcrumbs } from '../components/common';
 import { useAuth } from '../context/AuthContext';
 
 export default function Subjects() {
@@ -22,6 +22,7 @@ export default function Subjects() {
     <div>
       <div className="bg-gradient-to-br from-violet-700 via-purple-800 to-indigo-900 text-white">
         <div className="max-w-7xl mx-auto px-4 py-16 text-center">
+          <Breadcrumbs items={[{ label: 'المواد' }]} />
           <span className="inline-block px-4 py-1.5 rounded-full bg-white/10 border border-white/20 text-sm font-bold mb-5">المواد</span>
           <h1 className="text-4xl md:text-5xl font-black mb-4">{gradeId ? `مواد صفّك (${visible.length})` : '9 مواد — تغطية كاملة'}</h1>
           <p className="text-violet-200 text-lg max-w-2xl mx-auto">حصص مصوّرة، ملخصات، بنك أسئلة، اختبارات، ومراجعات لكل مادة وكل صف من ٨ حتى ١٢.</p>
@@ -60,9 +61,6 @@ export default function Subjects() {
                   </Link>
                   <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between gap-2 flex-wrap">
                     <div className="flex items-center gap-2">
-                      {s.sample_count > 0 && (
-                        <Link to={`/lessons?subject=${s.id}${gradeId ? `&grade_id=${gradeId}` : ''}`} className="text-xs font-black px-2.5 py-1.5 rounded-full bg-gold-100 text-gold-700 border border-gold-300 hover:bg-gold-200 transition-colors">🎁 عينة مجانية</Link>
-                      )}
                       <span className="text-sm font-black text-slate-900">{priceOf(s) ? `${priceOf(s)} ر.ع` : '—'} <span className="text-[10px] font-bold text-slate-400">/ سنة</span></span>
                     </div>
                     <Link to={`/pricing?subject=${s.id}&grade=${gradeId ?? ''}`} className="bg-violet-600 text-white text-xs font-extrabold px-4 py-2.5 rounded-xl hover:bg-violet-700 transition-colors">اشترك في المادة</Link>

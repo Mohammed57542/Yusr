@@ -29,7 +29,6 @@ export default function Pricing() {
   const [selected, setSelected] = useState([]);
   const [showPayment, setShowPayment] = useState(false);
   const [card, setCard] = useState({ name: '', number: '', expiry: '', cvc: '' });
-  const [referralCode, setReferralCode] = useState('');
   const [processing, setProcessing] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState('');
@@ -108,7 +107,7 @@ export default function Pricing() {
     setProcessing(true);
     setError('');
     try {
-      await api.post('/subscription/subscribe', { plan: activeOffer ? mode : undefined, subject_ids: selected, referral_code: referralCode });
+      await api.post('/subscription/subscribe', { plan: activeOffer ? mode : undefined, subject_ids: selected });
       const me = await api.get('/subscription/me');
       login(token, me);
       setShowPayment(false);
@@ -280,6 +279,61 @@ export default function Pricing() {
             </div>
           ))}
         </div>
+
+        <div className="max-w-5xl mx-auto mt-12 bg-white rounded-3xl border border-slate-100 shadow-sm p-8">
+          <h2 className="text-2xl font-black text-slate-900 text-center mb-8">📊 مقارنة العروض</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-200">
+                  <th className="text-right py-3 px-4 font-extrabold text-slate-900">الميزة</th>
+                  <th className="text-center py-3 px-4 font-bold text-slate-600">مادة واحدة</th>
+                  <th className="text-center py-3 px-4 font-bold text-violet-700">3 مواد 🏆</th>
+                  <th className="text-center py-3 px-4 font-bold text-slate-600">جميع المواد</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {[
+                  { feature: 'الحصص المصورة', single: true, triple: true, all: true },
+                  { feature: 'الملخصات والكتب', single: true, triple: true, all: true },
+                  { feature: 'بنك الأسئلة', single: true, triple: true, all: true },
+                  { feature: 'الاختبارات التفاعلية', single: true, triple: true, all: true },
+                  { feature: 'الحصص المباشرة', single: 'مادة واحدة', triple: '3 مواد', all: 'جميع المواد' },
+                  { feature: 'المساعد الذكي AI', single: 'محدود', triple: 'متوسط', all: 'غير محدود' },
+                  { feature: 'الشهادات والإشعارات', single: true, triple: true, all: true },
+                ].map((row) => (
+                  <tr key={row.feature} className="hover:bg-slate-50">
+                    <td className="py-3 px-4 font-bold text-slate-700">{row.feature}</td>
+                    <td className="text-center py-3 px-4">{row.single === true ? <span className="text-green-500">✓</span> : <span className="text-slate-500">{row.single}</span>}</td>
+                    <td className="text-center py-3 px-4 bg-violet-50/50">{row.triple === true ? <span className="text-green-500">✓</span> : <span className="text-violet-600 font-bold">{row.triple}</span>}</td>
+                    <td className="text-center py-3 px-4">{row.all === true ? <span className="text-green-500">✓</span> : <span className="text-slate-500">{row.all}</span>}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="max-w-5xl mx-auto mt-12 bg-white rounded-3xl border border-slate-100 shadow-sm p-8">
+          <h2 className="text-2xl font-black text-slate-900 text-center mb-8">❓ الأسئلة الشائعة</h2>
+          <div className="space-y-4">
+            {[
+              { q: 'هل يمكنني تغيير المادة بعد الاشتراك؟', a: 'نعم، يمكنك التواصل معنا على واتساب وسنقوم بالتعديل خلال 24 ساعة.' },
+              { q: 'هل الاشتراك يشمل جميع الصفوف؟', a: 'لا، كل اشتراك مخصص للصف الدراسي الخاص بك. يمكنك اختيار قسم 8-10 أو 11-12.' },
+              { q: 'ماذا يحدث بعد انتهاء فترة الاشتراك؟', a: 'ستتوقف الحصص المدفوعة عن العمل، لكن نتائجك وملاحظاتك تبقى محفوظة.' },
+              { q: 'هل هناك خصومات للطلاب المتفوقين؟', a: 'نعم! تواصل معنا وسنقدم لك عرضاً خاصاً للطلاب المتفوقين.' },
+              { q: 'كيف أدفع؟', a: 'نقبل بطاقات الائتمان (Visa/Mastercard) وبطاقات الخصم المباشر (Mada). الدفع آمن ومشفر 100%.' },
+            ].map((item, i) => (
+              <details key={i} className="group rounded-2xl border border-slate-200 overflow-hidden">
+                <summary className="px-6 py-4 cursor-pointer font-bold text-slate-800 hover:bg-violet-50 transition-colors list-none flex items-center justify-between">
+                  {item.q}
+                  <span className="text-slate-400 group-open:rotate-180 transition-transform">▼</span>
+                </summary>
+                <div className="px-6 pb-4 text-sm text-slate-600 leading-7">{item.a}</div>
+              </details>
+            ))}
+          </div>
+        </div>
       </div>
 
       {showPayment && (
@@ -295,10 +349,6 @@ export default function Pricing() {
               <p className="text-2xl font-black text-slate-900 mt-1">{total} ر.ع <span className="text-sm font-bold text-slate-400">/ سنة</span></p>
             </div>
             <form onSubmit={pay} className="space-y-4">
-              <div>
-                <Input label="كود السفير (اختياري)" value={referralCode} onChange={(e) => setReferralCode(e.target.value.toUpperCase())} placeholder="مثال: YUSR-AHMED1" dir="ltr" />
-                <p className="text-xs text-slate-400 mt-1.5">لديك كود؟ أدخله هنا ويدعم صديقك الذي دعاك 🎁</p>
-              </div>
               <Input label="اسم صاحب البطاقة" value={card.name} onChange={(e) => setCard({ ...card, name: e.target.value })} placeholder="الاسم كما يظهر على البطاقة" required />
               <Input label="رقم البطاقة" value={card.number} onChange={(e) => setCard({ ...card, number: e.target.value.replace(/[^\d]/g, '').slice(0, 16) })} placeholder="0000 0000 0000 0000" dir="ltr" required />
               <div className="grid grid-cols-2 gap-4">

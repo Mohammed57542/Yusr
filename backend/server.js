@@ -11,7 +11,9 @@ import examRoutes from './routes/exams.js';
 import aiRoutes from './routes/ai.js';
 import subscriptionRoutes from './routes/subscription.js';
 import adminRoutes from './routes/admin.js';
-import ambassadorRoutes from './routes/ambassador.js';
+import teacherRoutes from './routes/teacher.js';
+import studentRoutes from './routes/student.js';
+import socialRoutes from './routes/social.js';
 import { logger, initAdminLog } from './lib/logger.js';
 import db from './db.js';
 
@@ -52,8 +54,10 @@ app.use('/api', catalogRoutes);
 app.use('/api', examRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/subscription', subscriptionRoutes);
-app.use('/api/ambassador', ambassadorRoutes);
+app.use('/api/teacher', teacherRoutes);
+app.use('/api/student', studentRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api', socialRoutes);
 
 app.use((req, res) => res.status(404).json({ error: 'المسار غير موجود' }));
 app.use((err, _req, res, _next) => {
