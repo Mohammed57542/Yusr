@@ -3,7 +3,7 @@ services:
     name: yusr-platform
     runtime: node
     plan: free
-    buildCommand: cd frontend && npm install && npm run build && cd ../backend && npm install
+    buildCommand: chmod +x build.sh && ./build.sh
     startCommand: cd backend && node server.js
     envVars:
       - key: NODE_ENV
