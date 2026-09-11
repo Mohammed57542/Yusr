@@ -39,7 +39,7 @@ export default function Leaderboard() {
           <p className="text-5xl mb-4">😔</p>
           <h2 className="text-2xl font-black text-slate-900 mb-2">تعذر تحميل الترتيب</h2>
           <p className="text-slate-500 mb-6 text-sm">{error || 'حاول مرة أخرى بعد قليل'}</p>
-          <button onClick={() => window.location.reload()} className="bg-violet-600 text-white font-extrabold px-8 py-3.5 rounded-2xl hover:bg-violet-700 transition-colors">إعادة المحاولة</button>
+          <button onClick={() => window.location.reload()} className="bg-teal-600 text-white font-extrabold px-8 py-3.5 rounded-2xl hover:bg-teal-700 transition-colors">إعادة المحاولة</button>
         </div>
       </div>
     );
@@ -57,10 +57,10 @@ export default function Leaderboard() {
 
       <div className="max-w-5xl mx-auto px-4 py-14">
         <div className="flex justify-center gap-2 mb-10">
-          <button onClick={() => setTab('allTime')} className={`px-6 py-3 rounded-2xl font-extrabold text-sm transition-all ${tab === 'allTime' ? 'bg-violet-600 text-white shadow-lg shadow-violet-200' : 'bg-white border border-slate-200 text-slate-600'}`}>
+          <button onClick={() => setTab('allTime')} className={`px-6 py-3 rounded-2xl font-extrabold text-sm transition-all ${tab === 'allTime' ? 'bg-teal-600 text-white shadow-lg shadow-teal-200' : 'bg-white border border-slate-200 text-slate-600'}`}>
             🏆 الترتيب العام
           </button>
-          <button onClick={() => setTab('weekly')} className={`px-6 py-3 rounded-2xl font-extrabold text-sm transition-all ${tab === 'weekly' ? 'bg-violet-600 text-white shadow-lg shadow-violet-200' : 'bg-white border border-slate-200 text-slate-600'}`}>
+          <button onClick={() => setTab('weekly')} className={`px-6 py-3 rounded-2xl font-extrabold text-sm transition-all ${tab === 'weekly' ? 'bg-teal-600 text-white shadow-lg shadow-teal-200' : 'bg-white border border-slate-200 text-slate-600'}`}>
             🔥 هذا الأسبوع
           </button>
         </div>
@@ -78,9 +78,9 @@ export default function Leaderboard() {
                 </div>
                 <div className="flex items-center gap-4 shrink-0">
                   <div className={`h-2.5 w-24 sm:w-40 rounded-full overflow-hidden ${i === 0 ? 'bg-white/40' : 'bg-slate-100'}`}>
-                    <div className={`h-full rounded-full ${i === 0 ? 'bg-white' : 'bg-violet-500'}`} style={{ width: `${maxPoints ? (r.points / maxPoints) * 100 : 0}%` }} />
+                    <div className={`h-full rounded-full ${i === 0 ? 'bg-white' : 'bg-teal-500'}`} style={{ width: `${maxPoints ? (r.points / maxPoints) * 100 : 0}%` }} />
                   </div>
-                  <span className={`font-black text-xl w-20 text-center ${i === 0 ? 'text-slate-900' : 'text-violet-700'}`} dir="ltr">{r.points} 🏅</span>
+                  <span className={`font-black text-xl w-20 text-center ${i === 0 ? 'text-slate-900' : 'text-teal-700'}`} dir="ltr">{r.points} 🏅</span>
                 </div>
               </div>
             ))
@@ -102,9 +102,9 @@ export default function Leaderboard() {
           ))}
         </div>
 
-        <div className="mt-12 bg-gradient-to-l from-violet-600 to-purple-700 text-white rounded-[2rem] p-10 text-center">
+        <div className="mt-12 bg-gradient-to-l from-teal-600 to-cyan-700 text-white rounded-[2rem] p-10 text-center">
           <h2 className="text-2xl font-black mb-2">أصحاب أعلى النقاط في نهاية الأسبوع يفوزون بجوائز 🎁</h2>
-          <p className="text-violet-100 mb-6">اشترك في جروب صفك لمتابعة إعلان الفائزين كل أسبوع.</p>
+          <p className="text-teal-100 mb-6">اشترك في جروب صفك لمتابعة إعلان الفائزين كل أسبوع.</p>
           <div className="flex flex-wrap justify-center gap-4">
             <Link to="/groups" className="bg-amber-400 text-slate-900 font-extrabold px-8 py-3.5 rounded-2xl hover:-translate-y-0.5 transition-all">الجروبات المجانية</Link>
             <Link to="/exams" className="bg-white/10 border border-white/25 font-bold px-8 py-3.5 rounded-2xl hover:bg-white/20 transition-all">ابدأ جمع النقاط</Link>

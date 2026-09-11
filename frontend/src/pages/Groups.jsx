@@ -78,9 +78,9 @@ export default function Groups() {
           </div>
         )}
 
-        <div className="mt-14 bg-gradient-to-l from-violet-600 to-purple-700 text-white rounded-[2rem] p-10 md:p-14 text-center">
+        <div className="mt-14 bg-gradient-to-l from-teal-600 to-cyan-700 text-white rounded-[2rem] p-10 md:p-14 text-center">
           <h2 className="text-3xl md:text-4xl font-black mb-4">محتوى مجاني يوصلك كل يوم</h2>
-          <p className="text-violet-100 max-w-2xl mx-auto mb-8 leading-7">بانضمامك للجروب ستصلك مراجعات يومية، وحصص مجانية دورية، وتنبيهات فورية بكل جديد في منصة يُسر.</p>
+          <p className="text-teal-100 max-w-2xl mx-auto mb-8 leading-7">بانضمامك للجروب ستصلك مراجعات يومية، وحصص مجانية دورية، وتنبيهات فورية بكل جديد في منصة يُسر.</p>
           <div className="flex flex-wrap justify-center gap-4">
             <a href={waLink('مرحباً، أرغب بالانضمام إلى جروب صفي', settings)} target="_blank" rel="noreferrer" className="bg-amber-400 text-slate-900 font-extrabold px-8 py-4 rounded-2xl hover:-translate-y-0.5 transition-all">تواصل معنا واتساب</a>
             <a href="https://chat.whatsapp.com/EVph3f87bHo3QZKiCy9yhI" target="_blank" rel="noreferrer" className="bg-white/10 border border-white/25 font-bold px-8 py-4 rounded-2xl hover:bg-white/20 transition-all">جروب الصف الثاني عشر</a>

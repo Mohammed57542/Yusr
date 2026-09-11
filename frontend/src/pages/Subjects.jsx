@@ -20,12 +20,12 @@ export default function Subjects() {
 
   return (
     <div>
-      <div className="bg-gradient-to-br from-violet-700 via-purple-800 to-indigo-900 text-white">
+      <div className="bg-gradient-to-br from-teal-700 via-cyan-800 to-night text-white">
         <div className="max-w-7xl mx-auto px-4 py-16 text-center">
           <Breadcrumbs items={[{ label: 'المواد' }]} />
           <span className="inline-block px-4 py-1.5 rounded-full bg-white/10 border border-white/20 text-sm font-bold mb-5">المواد</span>
           <h1 className="text-4xl md:text-5xl font-black mb-4">{gradeId ? `مواد صفّك (${visible.length})` : '9 مواد — تغطية كاملة'}</h1>
-          <p className="text-violet-200 text-lg max-w-2xl mx-auto">حصص مصوّرة، ملخصات، بنك أسئلة، اختبارات، ومراجعات لكل مادة وكل صف من ٨ حتى ١٢.</p>
+          <p className="text-teal-200 text-lg max-w-2xl mx-auto">حصص مصوّرة، ملخصات، بنك أسئلة، اختبارات، ومراجعات لكل مادة وكل صف من ٨ حتى ١٢.</p>
           {!gradeId && (
             <Link to="/grades" className="inline-block mt-6 bg-amber-400 text-slate-900 font-extrabold px-8 py-3.5 rounded-2xl hover:-translate-y-0.5 transition-all shadow-xl shadow-amber-500/20">
               اختر صفّك أولاً
@@ -50,20 +50,20 @@ export default function Subjects() {
                     <div className="flex items-center gap-4 mb-5">
                       <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-4xl shadow-sm group-hover:scale-110 transition-transform" style={{ background: `${s.color}1a` }}>{s.icon}</div>
                       <div>
-                        <h3 className="text-lg font-extrabold text-slate-900 group-hover:text-violet-700 transition-colors">{s.name}</h3>
+                        <h3 className="text-lg font-extrabold text-slate-900 group-hover:text-teal-700 transition-colors">{s.name}</h3>
                         <p className="text-xs text-slate-400">🎥 {s.lesson_count} درس متاح • الصفوف {(s.grade_from ?? 8)} - {(s.grade_to ?? 12)}</p>
                       </div>
                     </div>
                     <p className="text-slate-500 text-sm leading-6 mb-4">شروحات مبسطة، ملخصات PDF، بنك أسئلة، اختبارات، ومراجعات.</p>
-                    <span className="inline-flex items-center gap-1 text-violet-600 font-bold text-sm group-hover:gap-2 transition-all">
+                    <span className="inline-flex items-center gap-1 text-teal-600 font-bold text-sm group-hover:gap-2 transition-all">
                       دخول المادة <span>←</span>
                     </span>
                   </Link>
                   <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between gap-2 flex-wrap">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-black text-slate-900">{priceOf(s) ? `${priceOf(s)} ر.ع` : '—'} <span className="text-[10px] font-bold text-slate-400">/ سنة</span></span>
+                      <span className="text-sm font-black text-slate-900">{priceOf(s) ? `${priceOf(s)} ر.ع` : '—'} <span className="text-[10px] font-bold text-slate-400">/ فصل</span></span>
                     </div>
-                    <Link to={`/pricing?subject=${s.id}&grade=${gradeId ?? ''}`} className="bg-violet-600 text-white text-xs font-extrabold px-4 py-2.5 rounded-xl hover:bg-violet-700 transition-colors">اشترك في المادة</Link>
+                    <Link to={`/pricing?subject=${s.id}&grade=${gradeId ?? ''}`} className="bg-teal-600 text-white text-xs font-extrabold px-4 py-2.5 rounded-xl hover:bg-teal-700 transition-colors">اشترك في المادة</Link>
                   </div>
                 </div>
               ))}
@@ -85,7 +85,7 @@ export default function Subjects() {
                 ))}
               </div>
               <div className="text-center mt-10">
-                <Link to="/pricing" className="inline-block bg-violet-600 text-white font-extrabold px-10 py-4 rounded-2xl shadow-lg shadow-violet-200 hover:-translate-y-0.5 transition-all">
+                <Link to="/pricing" className="inline-block bg-teal-600 text-white font-extrabold px-10 py-4 rounded-2xl shadow-lg shadow-teal-200 hover:-translate-y-0.5 transition-all">
                   اطّلع على خطط الاشتراك
                 </Link>
               </div>

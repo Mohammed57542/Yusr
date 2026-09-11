@@ -10,7 +10,7 @@ const FALLBACK = [
     desc: 'بدلاً من الاشتراك في كل مادة على حدة. احصل على 3 مواد كاملة: الحصص والملخصات والاختبارات والمراجعات.',
     price: 'وفّر حتى 8 ريالات',
     cta: '/pricing',
-    color: 'from-violet-600 to-purple-700',
+    color: 'from-teal-600 to-cyan-700',
   },
   {
     badge: 'لفترة محدودة ⏰',
@@ -65,7 +65,7 @@ export default function Offers() {
     desc: p.description || '',
     price: p.discount_text || 'عرض خاص',
     cta: '/pricing',
-    color: 'from-violet-600 to-purple-700',
+    color: 'from-teal-600 to-cyan-700',
   })) : FALLBACK);
 
   return (
@@ -104,9 +104,9 @@ export default function Offers() {
           ))}
         </div>
 
-        <div className="mt-16 bg-gradient-to-br from-violet-700 via-purple-800 to-indigo-900 text-white rounded-[2rem] p-10 md:p-14 text-center">
+        <div className="mt-16 bg-gradient-to-br from-teal-700 via-cyan-800 to-night text-white rounded-[2rem] p-10 md:p-14 text-center">
           <h2 className="text-3xl md:text-4xl font-black mb-4">أكثر من مجرد عرض</h2>
-          <p className="text-violet-200 max-w-2xl mx-auto mb-8 leading-7">عند الاشتراك تحصل على كل شيء: الحصص المصورة، الملخصات والملفات، بنك الأسئلة، الاختبارات، المراجعات، والحصص المباشرة — لمدة سنة كاملة.</p>
+          <p className="text-teal-200 max-w-2xl mx-auto mb-8 leading-7">عند الاشتراك تحصل على كل شيء: الحصص المصورة، الملخصات والملفات، بنك الأسئلة، الاختبارات، المراجعات، والحصص المباشرة لفصل دراسي كامل.</p>
           <Link to="/pricing" className="inline-block bg-amber-400 text-slate-900 font-extrabold px-10 py-4 rounded-2xl hover:-translate-y-0.5 transition-all shadow-2xl shadow-amber-500/25">اطّلع على خطط الاشتراك</Link>
         </div>
       </div>

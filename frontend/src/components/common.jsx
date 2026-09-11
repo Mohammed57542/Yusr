@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 export function Loading({ label = 'جارٍ التحميل...' }) {
   return (
     <div className="flex flex-col items-center justify-center py-20 gap-3">
-      <div className="w-10 h-10 border-4 border-violet-200 border-t-violet-600 rounded-full animate-spin" />
+      <div className="w-10 h-10 border-4 border-teal-200 border-t-teal-600 rounded-full animate-spin" />
       <p className="text-slate-500 text-sm">{label}</p>
     </div>
   );
@@ -46,7 +46,7 @@ export function SkeletonLesson() {
 
 export function SkeletonHero() {
   return (
-    <div className="bg-gradient-to-br from-violet-500 via-violet-700 to-night py-20">
+    <div className="bg-gradient-to-br from-teal-500 via-teal-700 to-night py-20">
       <div className="max-w-7xl mx-auto px-4 grid lg:grid-cols-2 gap-12 items-center">
         <div className="space-y-4 animate-pulse">
           <Skeleton className="h-6 w-48 bg-white/20" />
@@ -78,10 +78,10 @@ export function LockedContent({ subjectName = '', icon = '🔒', note }) {
           هذا المحتوى للمشتركين{subjectName ? ` في مادة ${subjectName}` : ''} فقط — الحصص والملخصات والاختبارات وبنك الأسئلة.
         </p>
         {note && <p className="text-sm text-slate-400 mb-6">{note}</p>}
-        <Link to="/pricing" className="block w-full bg-gradient-to-l from-violet-600 to-purple-700 text-white font-extrabold py-4 rounded-2xl hover:-translate-y-0.5 transition-all shadow-lg shadow-violet-200 mb-3">
+        <Link to="/pricing" className="block w-full bg-gradient-to-l from-teal-600 to-cyan-700 text-white font-extrabold py-4 rounded-2xl hover:-translate-y-0.5 transition-all shadow-lg shadow-teal-200 mb-3">
           عرّف على خطط الاشتراك 💳
         </Link>
-        <Link to="/pricing?grade=own" className="block text-sm text-violet-600 font-bold underline">أو اشترك بموادك حسب قسمك الدراسي</Link>
+        <Link to="/pricing?grade=own" className="block text-sm text-teal-600 font-bold underline">أو اشترك بموادك حسب صفك الدراسي</Link>
       </div>
     </div>
   );
@@ -101,7 +101,7 @@ export function SectionHeader({ eyebrow, title, subtitle, center }) {
   return (
     <div className={`mb-10 ${center ? 'text-center' : ''}`}>
       {eyebrow && (
-        <span className="inline-block px-3 py-1 rounded-full bg-violet-100 text-violet-700 text-xs font-bold mb-3">{eyebrow}</span>
+        <span className="inline-block px-3 py-1 rounded-full bg-teal-100 text-teal-700 text-xs font-bold mb-3">{eyebrow}</span>
       )}
       <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900">{title}</h2>
       {subtitle && <p className={`mt-3 text-slate-500 ${center ? 'mx-auto' : ''} max-w-2xl`}>{subtitle}</p>}
@@ -109,7 +109,7 @@ export function SectionHeader({ eyebrow, title, subtitle, center }) {
   );
 }
 
-export function Badge({ children, color = 'bg-violet-100 text-violet-700' }) {
+export function Badge({ children, color = 'bg-teal-100 text-teal-700' }) {
   return <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-bold ${color}`}>{children}</span>;
 }
 
@@ -136,7 +136,7 @@ export function Input({ label, error, ...props }) {
       <label className="block text-sm font-bold text-slate-700 mb-1.5">{label}</label>
       <input
         {...props}
-        className={`w-full px-4 py-3 rounded-xl border bg-white focus:outline-none focus:ring-2 focus:ring-violet-400 transition-all ${
+        className={`w-full px-4 py-3 rounded-xl border bg-white focus:outline-none focus:ring-2 focus:ring-teal-400 transition-all ${
           error ? 'border-red-300' : 'border-slate-200'
         }`}
       />
@@ -151,7 +151,7 @@ export function Select({ label, children, ...props }) {
       {label && <label className="block text-sm font-bold text-slate-700 mb-1.5">{label}</label>}
       <select
         {...props}
-        className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-violet-400 transition-all"
+        className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-teal-400 transition-all"
       >
         {children}
       </select>
@@ -172,12 +172,12 @@ export function Stat({ icon, value, label }) {
 export function Breadcrumbs({ items = [] }) {
   return (
     <nav className="flex items-center gap-2 text-sm text-slate-500 mb-6 flex-wrap">
-      <a href="/" className="hover:text-violet-600 transition-colors">🏠 الرئيسية</a>
+      <a href="/" className="hover:text-teal-600 transition-colors">🏠 الرئيسية</a>
       {items.map((item, i) => (
         <span key={i} className="flex items-center gap-2">
           <span className="text-slate-300">←</span>
           {item.href ? (
-            <a href={item.href} className="hover:text-violet-600 transition-colors">{item.label}</a>
+            <a href={item.href} className="hover:text-teal-600 transition-colors">{item.label}</a>
           ) : (
             <span className="text-slate-800 font-medium">{item.label}</span>
           )}

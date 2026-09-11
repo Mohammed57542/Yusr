@@ -113,20 +113,23 @@ export default function Dashboard() {
   }
 
   const {
-    completedLessons = 0,
-    averageScore = 0,
-    examCount = 0,
-    points = 0,
-    level = 'مبتدئ',
-    nextLevelPoints = 100,
-    currentLevelPoints = 0,
-    subjectProgress = [],
-    upcomingExams = [],
-    upcomingSessions = [],
-    recentResults = [],
+    completed_lessons: completedLessons = 0,
+    average_score: averageScore = 0,
+    total_exam_results: examCount = 0,
+    user: userData,
+    current_level: currentLevel = {},
+    next_level: nextLevel = {},
+    subscribed_subjects: subjectProgress = [],
+    upcoming_exams: upcomingExams = [],
+    recent_exam_results: recentResults = [],
     recommendations = [],
-    achievements = [],
+    badges_earned: achievements = [],
   } = data;
+
+  const points = userData?.points || 0;
+  const level = currentLevel?.name || 'مبتدئ';
+  const nextLevelPoints = nextLevel?.points_required || 100;
+  const currentLevelPoints = currentLevel?.points_required || 0;
 
   const levelPct = nextLevelPoints > 0
     ? Math.round((currentLevelPoints / nextLevelPoints) * 100)
@@ -293,35 +296,31 @@ export default function Dashboard() {
             )}
           </div>
 
-          {/* ── Upcoming Sessions ── */}
+          {/* ── Continue Learning ── */}
           <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-extrabold text-slate-900 text-sm">📅 الحصص القادمة</h3>
+              <h3 className="font-extrabold text-slate-900 text-sm">📚 الدروس المتاحة</h3>
               <Link to="/live-sessions" className="text-teal-600 text-xs font-bold">الكل ←</Link>
             </div>
-            {upcomingSessions.length === 0 ? (
-              <p className="text-sm text-slate-400 text-center py-4">لا توجد حصص قادمة</p>
+            {subjectProgress.length === 0 ? (
+              <p className="text-sm text-slate-400 text-center py-4">لم تشترك في أي مادة بعد</p>
             ) : (
               <div className="space-y-3">
-                {upcomingSessions.slice(0, 3).map((s) => (
-                  <div key={s.id} className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50">
+                {subjectProgress.slice(0, 3).map((s) => (
+                  <Link key={s.id} to={`/subjects/${s.id}`} className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 hover:bg-teal-50 transition-colors">
                     <span className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-lg shrink-0 shadow-sm">
-                      {s.subject_icon || '📅'}
+                      {s.icon || '📚'}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="font-bold text-sm text-slate-800 truncate">{s.title}</p>
-                      <p className="text-xs text-slate-400">
-                        {s.teacher_name && `${s.teacher_name} • `}
-                        {s.session_date?.slice(5)} {s.session_time}
-                      </p>
+                      <p className="font-bold text-sm text-slate-800 truncate">{s.name}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <div className="flex-1 h-1.5 rounded-full bg-slate-200 overflow-hidden">
+                          <div className="h-full rounded-full bg-teal-500" style={{ width: `${s.progress_percentage || 0}%` }} />
+                        </div>
+                        <span className="text-[10px] font-bold text-slate-400">{s.progress_percentage || 0}%</span>
+                      </div>
                     </div>
-                    <Link
-                      to="/live-sessions"
-                      className="bg-teal-600 text-white text-xs font-black px-3 py-1.5 rounded-xl shrink-0 hover:bg-teal-700 transition-colors"
-                    >
-                      انضم
-                    </Link>
-                  </div>
+                  </Link>
                 ))}
               </div>
             )}

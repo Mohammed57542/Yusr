@@ -15,11 +15,11 @@ export default function About() {
 
   return (
     <div>
-      <div className="bg-gradient-to-br from-violet-700 via-purple-800 to-indigo-900 text-white">
+      <div className="bg-gradient-to-br from-teal-700 via-cyan-800 to-teal-900 text-white">
         <div className="max-w-7xl mx-auto px-4 py-16 text-center">
           <span className="inline-block px-4 py-1.5 rounded-full bg-white/10 border border-white/20 text-sm font-bold mb-5">من نحن</span>
           <h1 className="text-4xl md:text-5xl font-black mb-4">يُسر — الطريق الأسهل للفهم والنجاح</h1>
-          <p className="text-violet-200 text-lg max-w-2xl mx-auto">منصة عُمانية هدفها مساعدة كل طالب على فهم دروسه ومذاكرتها بسهولة وبطريقة ممتعة.</p>
+          <p className="text-teal-200 text-lg max-w-2xl mx-auto">منصة عُمانية هدفها مساعدة كل طالب على فهم دروسه ومذاكرتها بسهولة وبطريقة ممتعة.</p>
         </div>
       </div>
 
@@ -46,7 +46,7 @@ export default function About() {
             ].map((x) => (
               <div key={x.value} className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 text-center">
                 <div className="text-3xl mb-3">{x.icon}</div>
-                <p className="font-extrabold text-violet-700">{x.value}</p>
+                <p className="font-extrabold text-teal-700">{x.value}</p>
                 <p className="text-sm text-slate-500 mt-1 leading-5">{x.desc}</p>
               </div>
             ))}
@@ -57,16 +57,16 @@ export default function About() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-5 mb-20">
             {nums.map((s) => (
               <div key={s.l} className="bg-white rounded-3xl border border-slate-100 shadow-sm p-7 text-center">
-                <p className="text-4xl font-black text-violet-700">{s.v}</p>
+                <p className="text-4xl font-black text-teal-700">{s.v}</p>
                 <p className="text-sm text-slate-500 font-medium mt-1">{s.l}</p>
               </div>
             ))}
           </div>
         )}
 
-        <div className="bg-gradient-to-l from-violet-600 to-purple-700 text-white rounded-[2rem] p-10 md:p-14 text-center">
+        <div className="bg-gradient-to-l from-teal-600 to-cyan-700 text-white rounded-[2rem] p-10 md:p-14 text-center">
           <h2 className="text-3xl md:text-4xl font-black mb-4">انضم إلى رحلة التفوق مع يُسر</h2>
-          <p className="text-violet-100 max-w-2xl mx-auto mb-8">ابدأ مجاناً الآن، واشترك فقط عندما تريد الوصول الكامل.</p>
+          <p className="text-teal-100 max-w-2xl mx-auto mb-8">ابدأ مجاناً الآن، واشترك فقط عندما تريد الوصول الكامل.</p>
           <div className="flex flex-wrap justify-center gap-4">
             <Link to="/register" className="bg-amber-400 text-slate-900 font-extrabold px-10 py-4 rounded-2xl hover:-translate-y-0.5 transition-all">ابدأ الآن</Link>
             <Link to="/pricing" className="bg-white/10 border border-white/25 font-bold px-10 py-4 rounded-2xl hover:bg-white/20 transition-all">الاشتراكات</Link>

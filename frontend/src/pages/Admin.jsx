@@ -6,7 +6,7 @@ import { Loading, Alert } from '../components/common';
 
 const letters = ['أ', 'ب', 'ج', 'د', 'هـ', 'و', 'ز'];
 
-function StatCard({ icon, label, value, color = 'bg-violet-100 text-violet-700' }) {
+function StatCard({ icon, label, value, color = 'bg-teal-100 text-teal-700' }) {
   return (
     <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 flex items-center gap-4">
       <div className={`w-12 h-12 rounded-2xl ${color} flex items-center justify-center text-2xl shrink-0`}>{icon}</div>
@@ -98,9 +98,16 @@ const [plans, setPlans] = useState([]);
   const [auditTotal, setAuditTotal] = useState(0);
   const [pendingLessons, setPendingLessons] = useState([]);
   const [pendingExams, setPendingExams] = useState([]);
+  const [badges, setBadges] = useState([]);
+  const [badgeForm, setBadgeForm] = useState({ name: '', description: '', icon: '🏅', points_required: '' });
+  const [editingBadge, setEditingBadge] = useState(null);
+  const [userForm, setUserForm] = useState({ name: '', email: '', phone: '', password: '', role: 'student', grade: '' });
+  const [editingUser, setEditingUser] = useState(null);
+  const [resourceForm, setResourceForm] = useState({ grade_id: '', subject_id: '', type: 'summary', title: '', description: '', content: '' });
   const [teacherList, setTeacherList] = useState([]);
   const [allSubjects, setAllSubjects] = useState([]);
   const [editingTeacherSubjects, setEditingTeacherSubjects] = useState(null);
+  const [rejectModal, setRejectModal] = useState({ open: false, type: '', id: null, notes: '' });
 
   const canAdmin = user && (user.role === 'admin' || user.role === 'teacher');
   const canManagePricing = user && user.role === 'admin';
@@ -206,8 +213,8 @@ const [plans, setPlans] = useState([]);
     setError('');
     try {
       const [pl, pe] = await Promise.all([
-        api.get('/admin/lessons?status=pending'),
-        api.get('/admin/exams?status=pending'),
+        api.get('/admin/pending-lessons'),
+        api.get('/admin/pending-exams'),
       ]);
       setPendingLessons(pl);
       setPendingExams(pe);
@@ -220,10 +227,7 @@ const [plans, setPlans] = useState([]);
   };
 
   const rejectLesson = async (id) => {
-    const notes = prompt('سبب الرفض:');
-    if (notes === null) return;
-    setError('');
-    try { await api.patch(`/admin/lessons/${id}/approve`, { review_notes: notes }); setPendingLessons((p) => p.filter((l) => l.id !== id)); } catch (e) { setError(e.message); }
+    setRejectModal({ open: true, type: 'lesson', id, notes: '' });
   };
 
   const approveExam = async (id) => {
@@ -232,10 +236,22 @@ const [plans, setPlans] = useState([]);
   };
 
   const rejectExam = async (id) => {
-    const notes = prompt('سبب الرفض:');
-    if (notes === null) return;
+    setRejectModal({ open: true, type: 'exam', id, notes: '' });
+  };
+
+  const submitRejection = async () => {
+    if (!rejectModal.notes.trim()) return;
     setError('');
-    try { await api.patch(`/admin/exams/${id}/approve`, { review_notes: notes }); setPendingExams((p) => p.filter((x) => x.id !== id)); } catch (e) { setError(e.message); }
+    try {
+      if (rejectModal.type === 'lesson') {
+        await api.patch(`/admin/lessons/${rejectModal.id}/reject`, { review_notes: rejectModal.notes });
+        setPendingLessons((p) => p.filter((l) => l.id !== rejectModal.id));
+      } else {
+        await api.patch(`/admin/exams/${rejectModal.id}/reject`, { review_notes: rejectModal.notes });
+        setPendingExams((p) => p.filter((x) => x.id !== rejectModal.id));
+      }
+      setRejectModal({ open: false, type: '', id: null, notes: '' });
+    } catch (e) { setError(e.message); }
   };
 
   const loadTeachers = async () => {
@@ -254,7 +270,7 @@ const [plans, setPlans] = useState([]);
 
   const toggleTeacher = async (teacherId, enabled) => {
     setError('');
-    try { await api.patch(`/admin/teachers/${teacherId}`, { enabled: enabled ? 1 : 0 }); loadTeachers(); } catch (e) { setError(e.message); }
+    try { await api.patch(`/admin/teachers/${teacherId}/status`, { is_active: enabled ? 1 : 0 }); loadTeachers(); } catch (e) { setError(e.message); }
   };
 
   const downloadCSV = (data, filename) => {
@@ -551,6 +567,13 @@ const [plans, setPlans] = useState([]);
     if (id === 'audit') loadAuditLog();
     if (id === 'lessons') loadPendingContent();
     if (id === 'teachers') loadTeachers();
+    if (id === 'coupons') window.location.href = '/admin/coupons';
+    if (id === 'badges') loadBadges();
+  };
+
+  const loadBadges = () => {
+    setError('');
+    api.get('/admin/badges').then(setBadges).catch((e) => setError(e.message));
   };
 
   if (!canAdmin) return null;
@@ -572,6 +595,8 @@ const [plans, setPlans] = useState([]);
     { id: 'reports', label: '📊 التقارير' },
     { id: 'audit', label: '📋 سجل العمليات' },
     { id: 'teachers', label: '👨‍🏫 المعلمون' },
+    { id: 'coupons', label: '🏷️ الكوبونات' },
+    { id: 'badges', label: '🏅 الشارات' },
 ];
   if (canManagePricing) tabs.push({ id: 'pricing', label: '💰 الأسعار والعروض' });
   if (user.role === 'admin') tabs.push({ id: 'settings', label: '⚙️ الإعدادات' });
@@ -583,14 +608,14 @@ const [plans, setPlans] = useState([]);
           <h1 className="text-3xl font-black text-slate-900">⚙️ لوحة الإدارة</h1>
           <p className="text-slate-500">مرحباً، {user.name}</p>
         </div>
-        <span className="px-4 py-2 rounded-full bg-violet-100 text-violet-700 font-bold text-sm">دور: {user.role === 'admin' ? 'إدارة' : 'معلم'}</span>
+        <span className="px-4 py-2 rounded-full bg-teal-100 text-teal-700 font-bold text-sm">دور: {user.role === 'admin' ? 'إدارة' : 'معلم'}</span>
       </div>
 
       {error && <div className="mb-5"><Alert>{error}</Alert></div>}
 
       <div className="flex flex-wrap gap-2 mb-8">
         {tabs.map((t) => (
-          <button key={t.id} onClick={() => openTab(t.id)} className={`px-5 py-2.5 rounded-2xl text-sm font-bold transition-all ${tab === t.id ? 'bg-violet-600 text-white shadow-lg shadow-violet-200' : 'bg-white border border-slate-200 text-slate-600 hover:border-violet-300'}`}>
+          <button key={t.id} onClick={() => openTab(t.id)} className={`px-5 py-2.5 rounded-2xl text-sm font-bold transition-all ${tab === t.id ? 'bg-teal-600 text-white shadow-lg shadow-teal-200' : 'bg-white border border-slate-200 text-slate-600 hover:border-teal-300'}`}>
             {t.label}
           </button>
         ))}
@@ -615,12 +640,12 @@ const [plans, setPlans] = useState([]);
             <StatCard icon="⏳" label="طلبات معلقة" value={stats.pendingApplications} color="bg-red-100 text-red-700" />
             <StatCard icon="📗" label="الاشتراكات النشطة" value={stats.activeSubscriptions} color="bg-emerald-100 text-emerald-700" />
             <StatCard icon="💰" label="الإيرادات" value={`${Number(stats.totalRevenue).toFixed(3)} ر.ع`} color="bg-amber-100 text-amber-700" />
-            <StatCard icon="👥" label="المشتركين" value={stats.subscriberCount} color="bg-purple-100 text-purple-700" />
+            <StatCard icon="👥" label="المشتركين" value={stats.subscriberCount} color="bg-teal-100 text-teal-700" />
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-7">
               <h3 className="text-lg font-extrabold text-slate-900 mb-5">📚 الاشتراكات حسب المادة</h3>
-              <Bars rows={subsBySubject} color="bg-gradient-to-l from-violet-500 to-purple-700" />
+              <Bars rows={subsBySubject} color="bg-gradient-to-l from-teal-500 to-cyan-600" />
             </div>
             <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-7">
               <h3 className="text-lg font-extrabold text-slate-900 mb-5">🎬 الدروس حسب المادة</h3>
@@ -629,7 +654,7 @@ const [plans, setPlans] = useState([]);
           </div>
           <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-7">
             <h3 className="text-lg font-extrabold text-slate-900 mb-2">📈 متوسط نتائج الاختبارات</h3>
-            <p className="text-5xl font-black text-violet-700">{stats.avgExamScore}%</p>
+            <p className="text-5xl font-black text-teal-700">{stats.avgExamScore}%</p>
             <p className="text-sm text-slate-500 mt-1">متوسط أداء الطلاب في جميع الاختبارات</p>
           </div>
         </div>
@@ -653,8 +678,65 @@ const [plans, setPlans] = useState([]);
                 </select>
               </>
             )}
-            <button onClick={loadUsers} className="bg-violet-600 text-white font-extrabold px-6 py-3 rounded-xl hover:bg-violet-700 transition-colors">عرض</button>
+            <button onClick={loadUsers} className="bg-teal-600 text-white font-extrabold px-6 py-3 rounded-xl hover:bg-teal-700 transition-colors">عرض</button>
+            <button onClick={() => { setEditingUser(null); setUserForm({ name: '', email: '', phone: '', password: '', role: 'student', grade: '' }); }} className="bg-blue-600 text-white font-extrabold px-6 py-3 rounded-xl hover:bg-blue-700 transition-colors">+ مستخدم جديد</button>
           </div>
+          {editingUser === false && (
+            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
+              <h3 className="font-extrabold text-slate-900 mb-4">إنشاء مستخدم جديد</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <input value={userForm.name} onChange={(e) => setUserForm({...userForm, name: e.target.value})} placeholder="الاسم الكامل" className="px-4 py-3 rounded-xl border border-slate-200 text-sm" />
+                <input value={userForm.email} onChange={(e) => setUserForm({...userForm, email: e.target.value})} placeholder="البريد الإلكتروني" className="px-4 py-3 rounded-xl border border-slate-200 text-sm" dir="ltr" />
+                <input value={userForm.phone} onChange={(e) => setUserForm({...userForm, phone: e.target.value})} placeholder="رقم الهاتف" className="px-4 py-3 rounded-xl border border-slate-200 text-sm" dir="ltr" />
+                <input value={userForm.password} onChange={(e) => setUserForm({...userForm, password: e.target.value})} placeholder="كلمة المرور" type="password" className="px-4 py-3 rounded-xl border border-slate-200 text-sm" dir="ltr" />
+                <select value={userForm.role} onChange={(e) => setUserForm({...userForm, role: e.target.value})} className="px-4 py-3 rounded-xl border border-slate-200 text-sm">
+                  <option value="student">طالب</option>
+                  <option value="teacher">معلم</option>
+                  <option value="admin">إدارة</option>
+                </select>
+                <select value={userForm.grade} onChange={(e) => setUserForm({...userForm, grade: e.target.value})} className="px-4 py-3 rounded-xl border border-slate-200 text-sm">
+                  <option value="">بدون صف</option>
+                  <option value="8">الصف الثامن</option>
+                  <option value="9">الصف التاسع</option>
+                  <option value="10">الصف العاشر</option>
+                  <option value="11">الصف الحادي عشر</option>
+                  <option value="12">الصف الثاني عشر</option>
+                </select>
+              </div>
+              <div className="flex gap-3 mt-4">
+                <button onClick={async () => { try { await api.post('/admin/users', userForm); setEditingUser(null); loadUsers(); setError(''); } catch(e) { setError(e.message); } }} className="bg-blue-600 text-white font-extrabold px-6 py-3 rounded-xl hover:bg-blue-700 transition-colors">إنشاء</button>
+                <button onClick={() => setEditingUser(null)} className="bg-slate-200 text-slate-700 font-bold px-6 py-3 rounded-xl hover:bg-slate-300 transition-colors">إلغاء</button>
+              </div>
+            </div>
+          )}
+          {editingUser && (
+            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
+              <h3 className="font-extrabold text-slate-900 mb-4">تعديل المستخدم: {editingUser.name}</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <input value={userForm.name} onChange={(e) => setUserForm({...userForm, name: e.target.value})} placeholder="الاسم الكامل" className="px-4 py-3 rounded-xl border border-slate-200 text-sm" />
+                <input value={userForm.email} onChange={(e) => setUserForm({...userForm, email: e.target.value})} placeholder="البريد الإلكتروني" className="px-4 py-3 rounded-xl border border-slate-200 text-sm" dir="ltr" />
+                <input value={userForm.phone} onChange={(e) => setUserForm({...userForm, phone: e.target.value})} placeholder="رقم الهاتف" className="px-4 py-3 rounded-xl border border-slate-200 text-sm" dir="ltr" />
+                <input value={userForm.password} onChange={(e) => setUserForm({...userForm, password: e.target.value})} placeholder="كلمة مرور جديدة (اتركها فاضية لعدم التغيير)" type="password" className="px-4 py-3 rounded-xl border border-slate-200 text-sm" dir="ltr" />
+                <select value={userForm.role} onChange={(e) => setUserForm({...userForm, role: e.target.value})} className="px-4 py-3 rounded-xl border border-slate-200 text-sm">
+                  <option value="student">طالب</option>
+                  <option value="teacher">معلم</option>
+                  <option value="admin">إدارة</option>
+                </select>
+                <select value={userForm.grade} onChange={(e) => setUserForm({...userForm, grade: e.target.value})} className="px-4 py-3 rounded-xl border border-slate-200 text-sm">
+                  <option value="">بدون صف</option>
+                  <option value="8">الصف الثامن</option>
+                  <option value="9">الصف التاسع</option>
+                  <option value="10">الصف العاشر</option>
+                  <option value="11">الصف الحادي عشر</option>
+                  <option value="12">الصف الثاني عشر</option>
+                </select>
+              </div>
+              <div className="flex gap-3 mt-4">
+                <button onClick={async () => { try { await api.patch(`/admin/users/${editingUser.id}`, userForm); setEditingUser(null); loadUsers(); setError(''); } catch(e) { setError(e.message); } }} className="bg-blue-600 text-white font-extrabold px-6 py-3 rounded-xl hover:bg-blue-700 transition-colors">حفظ التعديلات</button>
+                <button onClick={() => setEditingUser(null)} className="bg-slate-200 text-slate-700 font-bold px-6 py-3 rounded-xl hover:bg-slate-300 transition-colors">إلغاء</button>
+              </div>
+            </div>
+          )}
           <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-x-auto">
             <table className="w-full text-sm min-w-[640px]">
               <thead className="bg-slate-50 text-slate-500 text-xs">
@@ -666,6 +748,7 @@ const [plans, setPlans] = useState([]);
                   <th className="text-right px-6 py-4">النقاط</th>
                   <th className="text-right px-6 py-4">المواد</th>
                   <th className="text-right px-6 py-4">الاشتراك</th>
+                  <th className="text-right px-6 py-4">إجراءات</th>
                 </tr>
               </thead>
               <tbody>
@@ -681,6 +764,9 @@ const [plans, setPlans] = useState([]);
                       <span className={`px-3 py-1 rounded-full text-xs font-black ${u.sub_status === 'active' ? 'bg-emerald-100 text-emerald-700' : u.sub_status === 'inactive' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'}`}>
                         {u.sub_status === 'active' ? 'نشط' : u.sub_status === 'inactive' ? 'منتهي' : 'بدون'}
                       </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <button onClick={() => { setEditingUser(u); setUserForm({ name: u.name, email: u.email, phone: u.phone || '', password: '', role: u.role, grade: u.grade || '' }); }} className="text-blue-600 hover:text-blue-800 text-xs font-bold ml-2">تعديل</button>
                     </td>
                   </tr>
                 ))}
@@ -714,7 +800,7 @@ const [plans, setPlans] = useState([]);
             <div key={a.id} className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
               <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
                 <div>
-                  <p className="font-extrabold text-slate-900">{a.name} — <span className="text-violet-600">{a.subject}</span></p>
+                  <p className="font-extrabold text-slate-900">{a.name} — <span className="text-teal-600">{a.subject}</span></p>
                   <p className="text-xs text-slate-400" dir="ltr">{a.email} • {a.phone || '—'} • {a.years_experience} سنة خبرة</p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -744,7 +830,7 @@ const [plans, setPlans] = useState([]);
             <input value={newGroup.title} onChange={(e) => setNewGroup({ ...newGroup, title: e.target.value })} placeholder="اسم الجروب" className="px-4 py-3 rounded-xl border border-slate-200 font-bold text-sm" required />
             <input value={newGroup.description} onChange={(e) => setNewGroup({ ...newGroup, description: e.target.value })} placeholder="الوصف" className="px-4 py-3 rounded-xl border border-slate-200 text-sm" />
             <input value={newGroup.link} onChange={(e) => setNewGroup({ ...newGroup, link: e.target.value })} placeholder="رابط واتساب" className="px-4 py-3 rounded-xl border border-slate-200 text-sm" dir="ltr" required />
-            <button type="submit" className="bg-violet-600 text-white font-extrabold py-3 rounded-xl hover:bg-violet-700 transition-colors">إضافة</button>
+            <button type="submit" className="bg-teal-600 text-white font-extrabold py-3 rounded-xl hover:bg-teal-700 transition-colors">إضافة</button>
           </form>
           <div className="space-y-3">
             {groups.map((g) => (
@@ -764,7 +850,31 @@ const [plans, setPlans] = useState([]);
       )}
 
       {tab === 'resources' && (
-        <div className="space-y-3">
+        <div className="space-y-4">
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
+            <h3 className="font-extrabold text-slate-900 mb-4">إضافة مورد جديد</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <select value={resourceForm.grade_id} onChange={(e) => setResourceForm({...resourceForm, grade_id: e.target.value})} className="px-4 py-3 rounded-xl border border-slate-200 text-sm">
+                <option value="">اختر الصف</option>
+                {grades.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+              </select>
+              <select value={resourceForm.subject_id} onChange={(e) => setResourceForm({...resourceForm, subject_id: e.target.value})} className="px-4 py-3 rounded-xl border border-slate-200 text-sm">
+                <option value="">اختر المادة</option>
+                {subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+              <select value={resourceForm.type} onChange={(e) => setResourceForm({...resourceForm, type: e.target.value})} className="px-4 py-3 rounded-xl border border-slate-200 text-sm">
+                <option value="summary">ملخص</option>
+                <option value="worksheet">ورقة عمل</option>
+                <option value="review">مراجعة</option>
+                <option value="book">كتاب</option>
+                <option value="video">فيديو</option>
+              </select>
+              <input value={resourceForm.title} onChange={(e) => setResourceForm({...resourceForm, title: e.target.value})} placeholder="عنوان المورد" className="px-4 py-3 rounded-xl border border-slate-200 text-sm" />
+              <input value={resourceForm.description} onChange={(e) => setResourceForm({...resourceForm, description: e.target.value})} placeholder="الوصف (اختياري)" className="px-4 py-3 rounded-xl border border-slate-200 text-sm" />
+              <input value={resourceForm.content} onChange={(e) => setResourceForm({...resourceForm, content: e.target.value})} placeholder="المحتوى (اختياري)" className="px-4 py-3 rounded-xl border border-slate-200 text-sm" />
+            </div>
+            <button onClick={async () => { try { await api.post('/admin/resources', resourceForm); setResourceForm({ grade_id: '', subject_id: '', type: 'summary', title: '', description: '', content: '' }); api.get('/admin/resources').then(setResources); setError(''); } catch(e) { setError(e.message); } }} className="bg-blue-600 text-white font-extrabold px-6 py-3 rounded-xl hover:bg-blue-700 transition-colors mt-4">إضافة المورد</button>
+          </div>
           {resources.length === 0 ? <p className="text-slate-400 text-center py-10">لا توجد ملفات.</p> : resources.map((r) => (
             <div key={r.id} className="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 flex items-center justify-between gap-3">
               <div>
@@ -782,10 +892,10 @@ const [plans, setPlans] = useState([]);
           {results.length === 0 ? <p className="text-slate-400 text-center py-10">لا توجد نتائج.</p> : results.map((r) => (
             <div key={r.id} className="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 flex items-center justify-between gap-3">
               <div>
-                <p className="font-extrabold text-slate-800">{r.user_name} — <span className="text-violet-600">{r.exam_title}</span></p>
+                <p className="font-extrabold text-slate-800">{r.user_name} — <span className="text-teal-600">{r.exam_title}</span></p>
                 <p className="text-xs text-slate-400" dir="ltr">{r.created_at}</p>
               </div>
-              <span className={`px-4 py-2 rounded-full font-black shrink-0 ${r.score >= 85 ? 'bg-green-100 text-green-700' : r.score >= 60 ? 'bg-violet-100 text-violet-700' : 'bg-red-100 text-red-600'}`}>{r.score}%</span>
+              <span className={`px-4 py-2 rounded-full font-black shrink-0 ${r.score >= 85 ? 'bg-green-100 text-green-700' : r.score >= 60 ? 'bg-teal-100 text-teal-700' : 'bg-red-100 text-red-600'}`}>{r.score}%</span>
             </div>
           ))}
         </div>
@@ -801,7 +911,7 @@ const [plans, setPlans] = useState([]);
               <input value={subjectForm.slug} onChange={(e) => setSubjectForm({ ...subjectForm, slug: e.target.value })} placeholder="المعرّف (math_advanced)" className="px-4 py-3 rounded-xl border border-slate-200 text-sm" dir="ltr" required />
               <input value={subjectForm.icon} onChange={(e) => setSubjectForm({ ...subjectForm, icon: e.target.value })} placeholder="أيقونة 📘" className="px-4 py-3 rounded-xl border border-slate-200 text-sm" />
               <input value={subjectForm.color} onChange={(e) => setSubjectForm({ ...subjectForm, color: e.target.value })} placeholder="#3b82f6" className="px-4 py-3 rounded-xl border border-slate-200 text-sm" dir="ltr" />
-<input value={subjectForm.price} onChange={(e) => setSubjectForm({ ...subjectForm, price: e.target.value })} placeholder="سعر المادة (ر.ع/سنة) — اتركه فارغاً للافتراضي" className="px-4 py-3 rounded-xl border border-slate-200 text-sm" type="number" min="0" step="0.5" />
+<input value={subjectForm.price} onChange={(e) => setSubjectForm({ ...subjectForm, price: e.target.value })} placeholder="سعر المادة (ر.ع/فصل) — اتركه فارغاً للافتراضي" className="px-4 py-3 rounded-xl border border-slate-200 text-sm" type="number" min="0" step="0.5" />
               <select value={subjectForm.grade_from} onChange={(e) => setSubjectForm({ ...subjectForm, grade_from: Number(e.target.value) })} className="px-4 py-3 rounded-xl border border-slate-200 text-sm">
                 {[8, 9, 10, 11, 12].map((g) => <option key={g} value={g}>من الصف {g}</option>)}
               </select>
@@ -813,7 +923,7 @@ const [plans, setPlans] = useState([]);
                 {variants.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
               </select>
               <div className="flex gap-2">
-                <button type="submit" className="flex-1 bg-violet-600 text-white font-extrabold py-3 rounded-xl hover:bg-violet-700 transition-colors">{editingSubject ? 'حفظ' : 'إضافة'}</button>
+                <button type="submit" className="flex-1 bg-teal-600 text-white font-extrabold py-3 rounded-xl hover:bg-teal-700 transition-colors">{editingSubject ? 'حفظ' : 'إضافة'}</button>
                 {editingSubject && <button type="button" onClick={() => { setEditingSubject(null); setSubjectForm({ name: '', icon: '📘', color: '#3b82f6', slug: '', grade_from: 8, grade_to: 12, variant_id: '', price: '' }); }} className="px-4 py-3 rounded-xl bg-slate-100 text-slate-600 font-bold text-sm">إلغاء</button>}
               </div>
             </form>
@@ -847,7 +957,7 @@ const [plans, setPlans] = useState([]);
                 {grades.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
               </select>
               <input value={unitForm.name} onChange={(e) => setUnitForm({ ...unitForm, name: e.target.value })} placeholder="اسم الوحدة (الوحدة الأولى)" className="px-4 py-3 rounded-xl border border-slate-200 font-bold text-sm" required />
-              <button type="submit" className="bg-violet-600 text-white font-extrabold py-3 rounded-xl hover:bg-violet-700 transition-colors">إضافة</button>
+              <button type="submit" className="bg-teal-600 text-white font-extrabold py-3 rounded-xl hover:bg-teal-700 transition-colors">إضافة</button>
             </form>
             <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-96 overflow-y-auto">
               {units.map((u) => (
@@ -892,11 +1002,11 @@ const [plans, setPlans] = useState([]);
               <input value={lessonForm.video_url} onChange={(e) => setLessonForm({ ...lessonForm, video_url: e.target.value })} placeholder="رابط الفيديو (يوتيوب أو mp4)" className="px-4 py-3 rounded-xl border border-slate-200 text-sm md:col-span-2" dir="ltr" />
               <input value={lessonForm.pdf_url} onChange={(e) => setLessonForm({ ...lessonForm, pdf_url: e.target.value })} placeholder="رابط الملخص PDF" className="px-4 py-3 rounded-xl border border-slate-200 text-sm md:col-span-2" dir="ltr" />
 <label className="flex items-center gap-2 text-sm font-bold text-slate-700 cursor-pointer">
-  <input type="checkbox" checked={lessonForm.is_archive} onChange={(e) => setLessonForm({ ...lessonForm, is_archive: e.target.checked })} className="w-4 h-4 accent-violet-600" />
+  <input type="checkbox" checked={lessonForm.is_archive} onChange={(e) => setLessonForm({ ...lessonForm, is_archive: e.target.checked })} className="w-4 h-4 accent-teal-600" />
   🗂️ من السنوات السابقة (يظهر في تبويب السنوات السابقة)
 </label>
               <div className="flex gap-2 md:col-span-4">
-                <button type="submit" className="flex-1 bg-violet-600 text-white font-extrabold py-3 rounded-xl hover:bg-violet-700 transition-colors">{editingLesson ? 'حفظ' : 'إضافة'}</button>
+                <button type="submit" className="flex-1 bg-teal-600 text-white font-extrabold py-3 rounded-xl hover:bg-teal-700 transition-colors">{editingLesson ? 'حفظ' : 'إضافة'}</button>
                 {editingLesson && <button type="button" onClick={() => { setEditingLesson(null); setLessonForm({ subject_id: '', grade_id: '', unit_id: '', title: '', description: '', duration: 30, teacher_name: '', level: 'متوسط', video_url: '', pdf_url: '', is_archive: false }); }} className="px-6 py-3 rounded-xl bg-slate-100 text-slate-600 font-bold text-sm">إلغاء</button>}
               </div>
             </form>
@@ -1007,7 +1117,7 @@ const [plans, setPlans] = useState([]);
                   {questionForm.question_type === 'multi' ? (
                     <button type="button" onClick={() => multiToggle(i)} className={`w-9 h-9 rounded-xl font-black text-sm shrink-0 ${(Array.isArray(questionForm.correct_index) && questionForm.correct_index.includes(i)) ? 'bg-green-500 text-white' : 'bg-slate-100 text-slate-500'}`}>{(Array.isArray(questionForm.correct_index) && questionForm.correct_index.includes(i)) ? '✓' : `${i + 1}`}</button>
                   ) : (
-                    <button type="button" onClick={() => setQuestionForm({ ...questionForm, correct_index: i })} className={`w-9 h-9 rounded-xl font-black text-sm shrink-0 ${Number(questionForm.correct_index) === i ? 'bg-violet-600 text-white' : 'bg-slate-100 text-slate-500'}`}>{letters[i]}</button>
+                    <button type="button" onClick={() => setQuestionForm({ ...questionForm, correct_index: i })} className={`w-9 h-9 rounded-xl font-black text-sm shrink-0 ${Number(questionForm.correct_index) === i ? 'bg-teal-600 text-white' : 'bg-slate-100 text-slate-500'}`}>{letters[i]}</button>
                   )}
                   <input value={o} onChange={(e) => setOpt(i, e.target.value)} placeholder={`الخيار ${i + 1}${questionForm.question_type === 'tf' && i < 2 ? (i === 0 ? '(صح)' : '(خطأ)') : ''}`} className="flex-1 px-4 py-3 rounded-xl border border-slate-200 text-sm" required={i < 2} />
                 </div>
@@ -1023,7 +1133,7 @@ const [plans, setPlans] = useState([]);
                 {lessons.filter((l) => String(l.subject_id) === String(questionForm.subject_id) && String(l.grade_id) === String(questionForm.grade_id)).map((l) => <option key={l.id} value={l.id}>{l.title}</option>)}
               </select>
               <div className="flex gap-2 md:col-span-4">
-                <button type="submit" className="flex-1 bg-violet-600 text-white font-extrabold py-3 rounded-xl hover:bg-violet-700 transition-colors">{editingQuestion ? 'حفظ' : 'إضافة'}</button>
+                <button type="submit" className="flex-1 bg-teal-600 text-white font-extrabold py-3 rounded-xl hover:bg-teal-700 transition-colors">{editingQuestion ? 'حفظ' : 'إضافة'}</button>
                 {editingQuestion && <button type="button" onClick={() => { setEditingQuestion(null); setQuestionForm({ subject_id: '', grade_id: '', unit_id: '', lesson_id: '', question: '', options: ['', '', '', ''], correct_index: 0, question_type: 'mcq', explanation: '', difficulty: 'متوسط' }); }} className="px-6 py-3 rounded-xl bg-slate-100 text-slate-600 font-bold text-sm">إلغاء</button>}
               </div>
             </form>
@@ -1045,7 +1155,7 @@ const [plans, setPlans] = useState([]);
                 {questions.map((q) => (
                   <tr key={q.id} className="border-t border-slate-100">
                     <td className="px-6 py-4 font-bold text-slate-800 max-w-[280px]"><span className="line-clamp-2" title={q.question}>{q.question}</span></td>
-                    <td className="px-6 py-4"><span className={`px-2.5 py-1 rounded-full text-xs font-black ${q.question_type === 'multi' ? 'bg-fuchsia-100 text-fuchsia-700' : q.question_type === 'tf' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>{q.question_type === 'multi' ? 'إجابات متعددة' : q.question_type === 'tf' ? 'صح/خطأ' : 'اختيار'}</span></td>
+                    <td className="px-6 py-4"><span className={`px-2.5 py-1 rounded-full text-xs font-black ${q.question_type === 'multi' ? 'bg-cyan-100 text-cyan-700' : q.question_type === 'tf' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>{q.question_type === 'multi' ? 'إجابات متعددة' : q.question_type === 'tf' ? 'صح/خطأ' : 'اختيار'}</span></td>
                     <td className="px-6 py-4 text-slate-500">{q.subject_name} • {q.grade_name}</td>
                     <td className="px-6 py-4 text-slate-500">{q.unit_name ?? '—'}{q.lesson_title ? ` / ${q.lesson_title}` : ''}</td>
                     <td className="px-6 py-4 text-slate-600">{q.difficulty}</td>
@@ -1093,19 +1203,19 @@ const [plans, setPlans] = useState([]);
               <input value={examForm.close_at} onChange={(e) => setExamForm({ ...examForm, close_at: e.target.value })} placeholder="ينتهي في" className="px-4 py-3 rounded-xl border border-slate-200 text-sm" type="datetime-local" />
               <input value={examForm.points_reward} onChange={(e) => setExamForm({ ...examForm, points_reward: e.target.value })} placeholder="نقاط المكافأة" className="px-4 py-3 rounded-xl border border-slate-200 text-sm" type="number" min="0" />
               <label className="flex items-center gap-2 text-sm font-bold text-slate-700 cursor-pointer">
-                <input type="checkbox" checked={examForm.is_free} onChange={(e) => setExamForm({ ...examForm, is_free: e.target.checked })} className="w-4 h-4 accent-violet-600" />
+                <input type="checkbox" checked={examForm.is_free} onChange={(e) => setExamForm({ ...examForm, is_free: e.target.checked })} className="w-4 h-4 accent-teal-600" />
                 مجاني
               </label>
               <label className="flex items-center gap-2 text-sm font-bold text-slate-700 cursor-pointer">
-                <input type="checkbox" checked={examForm.show_results} onChange={(e) => setExamForm({ ...examForm, show_results: e.target.checked })} className="w-4 h-4 accent-violet-600" />
+                <input type="checkbox" checked={examForm.show_results} onChange={(e) => setExamForm({ ...examForm, show_results: e.target.checked })} className="w-4 h-4 accent-teal-600" />
                 إظهار النتائج فوراً
               </label>
               <label className="flex items-center gap-2 text-sm font-bold text-slate-700 cursor-pointer">
-                <input type="checkbox" checked={examForm.allow_review} onChange={(e) => setExamForm({ ...examForm, allow_review: e.target.checked })} className="w-4 h-4 accent-violet-600" />
+                <input type="checkbox" checked={examForm.allow_review} onChange={(e) => setExamForm({ ...examForm, allow_review: e.target.checked })} className="w-4 h-4 accent-teal-600" />
                 السماح بمراجعة الإجابات
               </label>
               <div className="flex gap-2 md:col-span-4">
-                <button type="submit" className="flex-1 bg-violet-600 text-white font-extrabold py-3 rounded-xl hover:bg-violet-700 transition-colors">{editingExam ? 'حفظ' : 'إضافة'}</button>
+                <button type="submit" className="flex-1 bg-teal-600 text-white font-extrabold py-3 rounded-xl hover:bg-teal-700 transition-colors">{editingExam ? 'حفظ' : 'إضافة'}</button>
                 {editingExam && <button type="button" onClick={() => { setEditingExam(null); setExamForm({ subject_id: '', grade_id: '', unit_id: '', title: '', description: '', duration_minutes: 30, question_count: 10, exam_type: 'درس', max_attempts: 1, open_at: '', close_at: '', is_free: false, show_results: true, allow_review: true, points_reward: 20 }); }} className="px-6 py-3 rounded-xl bg-slate-100 text-slate-600 font-bold text-sm">إلغاء</button>}
               </div>
             </form>
@@ -1131,7 +1241,7 @@ const [plans, setPlans] = useState([]);
                   <tr key={x.id} className="border-t border-slate-100">
                     <td className="px-6 py-4 font-bold text-slate-800">{x.title}<span className="text-xs text-slate-400 block">{x.unit_name ?? 'كل الوحدات'}</span></td>
                     <td className="px-6 py-4 text-slate-500">{x.subject_name} • {x.grade_name}</td>
-                    <td className="px-6 py-4"><span className="px-2.5 py-1 rounded-full text-xs font-black bg-violet-100 text-violet-700">{x.exam_type}</span></td>
+                    <td className="px-6 py-4"><span className="px-2.5 py-1 rounded-full text-xs font-black bg-teal-100 text-teal-700">{x.exam_type}</span></td>
                     <td className="px-6 py-4 text-slate-600">{x.duration_minutes} د</td>
                     <td className="px-6 py-4 text-slate-600">{x.question_count}</td>
                     <td className="px-6 py-4 text-slate-600">{x.max_attempts}</td>
@@ -1163,7 +1273,7 @@ const [plans, setPlans] = useState([]);
 
               <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
                 <StatCard icon="📝" label="إجمالي المحاولات" value={examAnalytics.stats.totalAttempts} color="bg-blue-100 text-blue-700" />
-                <StatCard icon="👥" label="طلاب فريدون" value={examAnalytics.stats.uniqueStudents} color="bg-violet-100 text-violet-700" />
+                <StatCard icon="👥" label="طلاب فريدون" value={examAnalytics.stats.uniqueStudents} color="bg-teal-100 text-teal-700" />
                 <StatCard icon="📈" label="متوسط الدرجات" value={`${examAnalytics.stats.avgScore}%`} color="bg-amber-100 text-amber-700" />
                 <StatCard icon="✅" label="نسبة النجاح" value={`${examAnalytics.stats.passRate}%`} color="bg-green-100 text-green-700" />
                 <StatCard icon="🏆" label="أعلى درجة" value={examAnalytics.stats.highestScore} color="bg-emerald-100 text-emerald-700" />
@@ -1224,7 +1334,7 @@ const [plans, setPlans] = useState([]);
               </select>
               <input value={liveForm.meeting_url} onChange={(e) => setLiveForm({ ...liveForm, meeting_url: e.target.value })} placeholder="رابط الحصة (Zoom/Teams)" className="px-4 py-3 rounded-xl border border-slate-200 text-sm md:col-span-3" dir="ltr" />
               <div className="flex gap-2 md:col-span-4">
-                <button type="submit" className="flex-1 bg-violet-600 text-white font-extrabold py-3 rounded-xl hover:bg-violet-700 transition-colors">{editingLive ? 'حفظ' : 'إضافة'}</button>
+                <button type="submit" className="flex-1 bg-teal-600 text-white font-extrabold py-3 rounded-xl hover:bg-teal-700 transition-colors">{editingLive ? 'حفظ' : 'إضافة'}</button>
                 {editingLive && <button type="button" onClick={() => { setEditingLive(null); setLiveForm({ subject_id: '', grade_id: '', title: '', teacher_name: '', session_date: '', session_time: '', status: 'upcoming', meeting_url: '', video_url: '' }); }} className="px-6 py-3 rounded-xl bg-slate-100 text-slate-600 font-bold text-sm">إلغاء</button>}
               </div>
             </form>
@@ -1252,11 +1362,11 @@ const [plans, setPlans] = useState([]);
         <div className="space-y-8">
           <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
             <h3 className="text-lg font-extrabold text-slate-900 mb-1">{editingPlan ? `✏️ تعديل الخطة: ${planForm.name}` : '➕ إضافة خطة اشتراك'}</h3>
-            <p className="text-xs text-slate-400 mb-5">تُعرض الخطط حسب القسم (٨-١٠ / ١١-١٢). "جميع المواد" = اترك حقل المواد فارغاً.</p>
+            <p className="text-xs text-slate-400 mb-5">تُعرض الخطط حسب المرحلة (٨-١٠ / ١١-١٢). "جميع المواد" = اترك حقل المواد فارغاً.</p>
             <form onSubmit={savePlan} className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <select value={planForm.section} onChange={(e) => setPlanForm({ ...planForm, section: e.target.value })} className="px-4 py-3 rounded-xl border border-slate-200 font-bold text-sm" required>
-                <option value="junior">قسم ٨-١٠</option>
-                <option value="senior">قسم ١١-١٢</option>
+                <option value="junior">الصفوف ٨-١٠</option>
+                <option value="senior">الصفوف ١١-١٢</option>
               </select>
               <input value={planForm.key} onChange={(e) => setPlanForm({ ...planForm, key: e.target.value })} placeholder="المعرّف (single/triple/all)" className="px-4 py-3 rounded-xl border border-slate-200 font-bold text-sm" dir="ltr" required />
               <input value={planForm.name} onChange={(e) => setPlanForm({ ...planForm, name: e.target.value })} placeholder="اسم الخطة" className="px-4 py-3 rounded-xl border border-slate-200 font-bold text-sm" required />
@@ -1264,11 +1374,11 @@ const [plans, setPlans] = useState([]);
               <input value={planForm.price} onChange={(e) => setPlanForm({ ...planForm, price: e.target.value })} placeholder="السعر (ر.ع)" className="px-4 py-3 rounded-xl border border-slate-200 font-bold text-sm" type="number" min="1" step="0.5" required />
               <input value={planForm.original_price} onChange={(e) => setPlanForm({ ...planForm, original_price: e.target.value })} placeholder="السعر قبل الخصم (اختياري)" className="px-4 py-3 rounded-xl border border-slate-200 text-sm" type="number" min="1" step="0.5" />
               <label className="flex items-center gap-2 text-sm font-bold text-slate-600 px-2">
-                <input type="checkbox" checked={!!planForm.active} onChange={(e) => setPlanForm({ ...planForm, active: e.target.checked ? 1 : 0 })} className="w-4 h-4 accent-violet-600" />
+                <input type="checkbox" checked={!!planForm.active} onChange={(e) => setPlanForm({ ...planForm, active: e.target.checked ? 1 : 0 })} className="w-4 h-4 accent-teal-600" />
                 مفعّلة
               </label>
               <div className="flex gap-2">
-                <button type="submit" className="flex-1 bg-violet-600 text-white font-extrabold py-3 rounded-xl hover:bg-violet-700 transition-colors">{editingPlan ? 'حفظ' : 'إضافة'}</button>
+                <button type="submit" className="flex-1 bg-teal-600 text-white font-extrabold py-3 rounded-xl hover:bg-teal-700 transition-colors">{editingPlan ? 'حفظ' : 'إضافة'}</button>
                 {editingPlan && <button type="button" onClick={() => { setEditingPlan(null); setPlanForm({ section: 'junior', key: '', name: '', subjects: '', price: '', original_price: '', active: 1 }); }} className="px-4 py-3 rounded-xl bg-slate-100 text-slate-600 font-bold text-sm">إلغاء</button>}
               </div>
             </form>
@@ -1278,13 +1388,13 @@ const [plans, setPlans] = useState([]);
             {plans.map((p) => (
               <div key={p.id} className={`bg-white rounded-3xl border p-5 shadow-sm ${p.active ? 'border-slate-100' : 'border-red-200 opacity-70'}`}>
                 <div className="flex items-center justify-between gap-3 mb-2">
-                  <p className="font-extrabold text-slate-900">{p.name} <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${p.section === 'senior' ? 'bg-indigo-100 text-indigo-700' : 'bg-violet-100 text-violet-700'}`}>{p.section === 'senior' ? '١١-١٢' : '٨-١٠'}</span></p>
+                  <p className="font-extrabold text-slate-900">{p.name} <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${p.section === 'senior' ? 'bg-cyan-100 text-cyan-700' : 'bg-teal-100 text-teal-700'}`}>{p.section === 'senior' ? '١١-١٢' : '٨-١٠'}</span></p>
                   <div className="flex gap-2 shrink-0">
                     <button onClick={() => editPlan(p)} className="bg-slate-100 text-slate-700 text-xs font-black px-3 py-1.5 rounded-lg hover:bg-slate-200">تعديل</button>
                     <button onClick={() => deletePlan(p.id)} className="bg-red-50 text-red-600 text-xs font-black px-3 py-1.5 rounded-lg hover:bg-red-100">حذف</button>
                   </div>
                 </div>
-                <p className="text-2xl font-black text-violet-700">{p.price} <span className="text-xs text-slate-400 font-bold">ر.ع / سنة</span>{p.original_price ? <span className="text-sm text-slate-400 line-through mr-2">{p.original_price}</span> : null}</p>
+                <p className="text-2xl font-black text-teal-700">{p.price} <span className="text-xs text-slate-400 font-bold">ر.ع / فصل</span>{p.original_price ? <span className="text-sm text-slate-400 line-through mr-2">{p.original_price}</span> : null}</p>
                 <p className="text-xs text-slate-400 mt-1">المعرف: <span dir="ltr">{p.key}</span> • المواد: {p.subjects || 'جميع المواد'}{p.discount_pct > 0 ? ` • خصم ${p.discount_pct}%` : ''}{p.ends_at ? ` • حتى ${p.ends_at}` : ''}</p>
               </div>
             ))}
@@ -1301,11 +1411,11 @@ const [plans, setPlans] = useState([]);
               <input value={offerForm.ends_at} onChange={(e) => setOfferForm({ ...offerForm, ends_at: e.target.value })} placeholder="نهاية (YYYY-MM-DD)" className="px-4 py-3 rounded-xl border border-slate-200 text-sm" dir="ltr" />
               <textarea value={offerForm.description} onChange={(e) => setOfferForm({ ...offerForm, description: e.target.value })} placeholder="الوصف" className="px-4 py-3 rounded-xl border border-slate-200 text-sm md:col-span-3" rows={2} />
               <div className="flex items-center gap-2 text-sm font-bold text-slate-600 px-2">
-                <input type="checkbox" checked={!!offerForm.active} onChange={(e) => setOfferForm({ ...offerForm, active: e.target.checked ? 1 : 0 })} className="w-4 h-4 accent-violet-600" />
+                <input type="checkbox" checked={!!offerForm.active} onChange={(e) => setOfferForm({ ...offerForm, active: e.target.checked ? 1 : 0 })} className="w-4 h-4 accent-teal-600" />
                 مفعّل
               </div>
               <div className="flex gap-2 md:col-span-4">
-                <button type="submit" className="flex-1 bg-violet-600 text-white font-extrabold py-3 rounded-xl hover:bg-violet-700 transition-colors">{editingOffer ? 'حفظ' : 'إضافة'}</button>
+                <button type="submit" className="flex-1 bg-teal-600 text-white font-extrabold py-3 rounded-xl hover:bg-teal-700 transition-colors">{editingOffer ? 'حفظ' : 'إضافة'}</button>
                 {editingOffer && <button type="button" onClick={() => { setEditingOffer(null); setOfferForm({ title: '', description: '', badge: '', discount_text: '', starts_at: '', ends_at: '', active: 1 }); }} className="px-4 py-3 rounded-xl bg-slate-100 text-slate-600 font-bold text-sm">إلغاء</button>}
               </div>
             </form>
@@ -1315,7 +1425,7 @@ const [plans, setPlans] = useState([]);
             {offers.length === 0 ? <p className="text-slate-400 text-center py-6">لا توجد عروض.</p> : offers.map((o) => (
               <div key={o.id} className={`bg-white rounded-3xl border p-5 shadow-sm flex flex-wrap items-center justify-between gap-3 ${o.active ? 'border-slate-100' : 'border-red-200 opacity-70'}`}>
                 <div>
-                  <p className="font-extrabold text-slate-900">{o.title} <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-fuchsia-100 text-fuchsia-700 mr-1">{o.badge || 'عرض'}</span></p>
+                  <p className="font-extrabold text-slate-900">{o.title} <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-cyan-100 text-cyan-700 mr-1">{o.badge || 'عرض'}</span></p>
                   <p className="text-xs text-slate-400 mt-1">{o.description || '—'}{o.discount_text ? ` • ${o.discount_text}` : ''}{o.ends_at ? ` • حتى ${o.ends_at}` : ''}</p>
                 </div>
                 <div className="flex gap-2 shrink-0">
@@ -1333,7 +1443,7 @@ const [plans, setPlans] = useState([]);
               <input value={newVariant.name} onChange={(e) => setNewVariant({ ...newVariant, name: e.target.value })} placeholder="اسم النوع (متقدمة)" className="px-4 py-3 rounded-xl border border-slate-200 font-bold text-sm" required />
               <input value={newVariant.description} onChange={(e) => setNewVariant({ ...newVariant, description: e.target.value })} placeholder="الوصف (اختياري)" className="px-4 py-3 rounded-xl border border-slate-200 text-sm md:col-span-2" />
               <div className="flex gap-2">
-                <button type="submit" className="flex-1 bg-violet-600 text-white font-extrabold py-3 rounded-xl hover:bg-violet-700 transition-colors">{editingVariant ? 'حفظ' : 'إضافة'}</button>
+                <button type="submit" className="flex-1 bg-teal-600 text-white font-extrabold py-3 rounded-xl hover:bg-teal-700 transition-colors">{editingVariant ? 'حفظ' : 'إضافة'}</button>
                 {editingVariant && <button type="button" onClick={() => { setEditingVariant(null); setNewVariant({ name: '', description: '' }); }} className="px-4 py-3 rounded-xl bg-slate-100 text-slate-600 font-bold text-sm">إلغاء</button>}
               </div>
             </form>
@@ -1368,7 +1478,7 @@ const [plans, setPlans] = useState([]);
                 { id: 'activity', label: 'تقرير النشاط' },
                 { id: 'export', label: 'تصدير' },
               ].map((s) => (
-                <button key={s.id} onClick={() => { setReportTab(s.id); if (s.id !== 'export') loadReport(s.id); }} className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${reportTab === s.id ? 'bg-violet-600 text-white shadow-md' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                <button key={s.id} onClick={() => { setReportTab(s.id); if (s.id !== 'export') loadReport(s.id); }} className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${reportTab === s.id ? 'bg-teal-600 text-white shadow-md' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
                   {s.label}
                 </button>
               ))}
@@ -1383,7 +1493,7 @@ const [plans, setPlans] = useState([]);
                 <input type="date" value={reportTo} onChange={(e) => setReportTo(e.target.value)} className="px-4 py-2.5 rounded-xl border border-slate-200 text-sm" dir="ltr" />
               </div>
               {reportTab !== 'export' && (
-                <button onClick={() => loadReport(reportTab)} className="bg-violet-600 text-white font-extrabold px-6 py-2.5 rounded-xl hover:bg-violet-700 transition-colors text-sm">عرض</button>
+                <button onClick={() => loadReport(reportTab)} className="bg-teal-600 text-white font-extrabold px-6 py-2.5 rounded-xl hover:bg-teal-700 transition-colors text-sm">عرض</button>
               )}
             </div>
           </div>
@@ -1457,7 +1567,7 @@ const [plans, setPlans] = useState([]);
                   <p className="font-extrabold text-slate-900 mb-2">{r.subject_name}</p>
                   <div className="grid grid-cols-2 gap-3 text-sm">
                     <div className="bg-blue-50 rounded-xl p-3 text-center"><p className="font-black text-blue-700 text-lg">{r.student_count ?? 0}</p><p className="text-xs text-slate-500">طالب</p></div>
-                    <div className="bg-violet-50 rounded-xl p-3 text-center"><p className="font-black text-violet-700 text-lg">{r.lesson_count ?? 0}</p><p className="text-xs text-slate-500">درس</p></div>
+                    <div className="bg-teal-50 rounded-xl p-3 text-center"><p className="font-black text-teal-700 text-lg">{r.lesson_count ?? 0}</p><p className="text-xs text-slate-500">درس</p></div>
                     <div className="bg-emerald-50 rounded-xl p-3 text-center"><p className="font-black text-emerald-700 text-lg">{r.exam_count ?? 0}</p><p className="text-xs text-slate-500">اختبار</p></div>
                     <div className="bg-amber-50 rounded-xl p-3 text-center"><p className="font-black text-amber-700 text-lg">{r.avg_score != null ? `${r.avg_score}%` : '—'}</p><p className="text-xs text-slate-500">متوسط الدرجات</p></div>
                   </div>
@@ -1509,7 +1619,7 @@ const [plans, setPlans] = useState([]);
                   </div>
                   <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 text-center">
                     <p className="text-xs text-slate-400 font-bold">متوسط شهري</p>
-                    <p className="text-3xl font-black text-violet-700">{reportData.summary.monthly_avg ?? 0} ر.ع</p>
+                    <p className="text-3xl font-black text-teal-700">{reportData.summary.monthly_avg ?? 0} ر.ع</p>
                   </div>
                 </div>
               )}
@@ -1591,6 +1701,51 @@ const [plans, setPlans] = useState([]);
         </div>
       )}
 
+      {tab === 'badges' && (
+        <div className="space-y-4">
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
+            <h3 className="font-extrabold text-slate-900 mb-4">🏅 إضافة / تعديل شارة</h3>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <input value={badgeForm.name} onChange={(e) => setBadgeForm({...badgeForm, name: e.target.value})} placeholder="اسم الشارة" className="px-4 py-3 rounded-xl border border-slate-200 text-sm" />
+              <input value={badgeForm.icon} onChange={(e) => setBadgeForm({...badgeForm, icon: e.target.value})} placeholder="الأيقونة (	emj)" className="px-4 py-3 rounded-xl border border-slate-200 text-sm" />
+              <input value={badgeForm.points_required} onChange={(e) => setBadgeForm({...badgeForm, points_required: e.target.value})} placeholder="النقاط المطلوبة" type="number" className="px-4 py-3 rounded-xl border border-slate-200 text-sm" />
+              <input value={badgeForm.description} onChange={(e) => setBadgeForm({...badgeForm, description: e.target.value})} placeholder="الوصف" className="px-4 py-3 rounded-xl border border-slate-200 text-sm" />
+            </div>
+            <div className="flex gap-3 mt-4">
+              <button onClick={async () => { try { if (editingBadge) { await api.patch(`/admin/badges/${editingBadge.id}`, badgeForm); } else { await api.post('/admin/badges', badgeForm); } setBadgeForm({ name: '', description: '', icon: '🏅', points_required: '' }); setEditingBadge(null); loadBadges(); setError(''); } catch(e) { setError(e.message); } }} className="bg-blue-600 text-white font-extrabold px-6 py-3 rounded-xl hover:bg-blue-700 transition-colors">{editingBadge ? 'حفظ التعديلات' : 'إضافة الشارة'}</button>
+              {editingBadge && <button onClick={() => { setEditingBadge(null); setBadgeForm({ name: '', description: '', icon: '🏅', points_required: '' }); }} className="bg-slate-200 text-slate-700 font-bold px-6 py-3 rounded-xl hover:bg-slate-300 transition-colors">إلغاء</button>}
+            </div>
+          </div>
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-x-auto">
+            <table className="w-full text-sm min-w-[500px]">
+              <thead className="bg-slate-50 text-slate-500 text-xs">
+                <tr>
+                  <th className="text-right px-6 py-4">الشارة</th>
+                  <th className="text-right px-6 py-4">الاسم</th>
+                  <th className="text-right px-6 py-4">النقاط المطلوبة</th>
+                  <th className="text-right px-6 py-4">الوصف</th>
+                  <th className="text-right px-6 py-4">إجراءات</th>
+                </tr>
+              </thead>
+              <tbody>
+                {badges.map((b) => (
+                  <tr key={b.id} className="border-t border-slate-100">
+                    <td className="px-6 py-4 text-2xl">{b.icon}</td>
+                    <td className="px-6 py-4 font-bold text-slate-800">{b.name}</td>
+                    <td className="px-6 py-4 font-black text-amber-600">{b.points_required}</td>
+                    <td className="px-6 py-4 text-slate-500">{b.description || '—'}</td>
+                    <td className="px-6 py-4">
+                      <button onClick={() => { setEditingBadge(b); setBadgeForm({ name: b.name, description: b.description || '', icon: b.icon, points_required: b.points_required }); }} className="text-blue-600 hover:text-blue-800 text-xs font-bold ml-2">تعديل</button>
+                      <button onClick={async () => { try { await api.delete(`/admin/badges/${b.id}`); loadBadges(); } catch(e) { setError(e.message); } }} className="text-red-600 hover:text-red-800 text-xs font-bold">حذف</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {tab === 'audit' && (
         <div className="space-y-5">
           <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
@@ -1609,7 +1764,7 @@ const [plans, setPlans] = useState([]);
                   <option value="export">تصدير</option>
                 </select>
               </div>
-              <button onClick={() => { setAuditPage(1); loadAuditLog(); }} className="bg-violet-600 text-white font-extrabold px-6 py-2.5 rounded-xl hover:bg-violet-700 transition-colors text-sm">عرض</button>
+              <button onClick={() => { setAuditPage(1); loadAuditLog(); }} className="bg-teal-600 text-white font-extrabold px-6 py-2.5 rounded-xl hover:bg-teal-700 transition-colors text-sm">عرض</button>
             </div>
           </div>
 
@@ -1631,7 +1786,7 @@ const [plans, setPlans] = useState([]);
                     <td className="px-6 py-4 text-slate-500 text-xs" dir="ltr">{entry.created_at || entry.date}</td>
                     <td className="px-6 py-4 font-bold text-slate-800">{entry.user_name || '—'}</td>
                     <td className="px-6 py-4"><span className={`px-2.5 py-1 rounded-full text-xs font-black ${entry.role === 'admin' ? 'bg-red-100 text-red-700' : entry.role === 'teacher' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>{entry.role || '—'}</span></td>
-                    <td className="px-6 py-4"><span className="px-2.5 py-1 rounded-full text-xs font-black bg-violet-100 text-violet-700">{entry.action}</span></td>
+                    <td className="px-6 py-4"><span className="px-2.5 py-1 rounded-full text-xs font-black bg-teal-100 text-teal-700">{entry.action}</span></td>
                     <td className="px-6 py-4 text-slate-600">{entry.entity_type || '—'}</td>
                     <td className="px-6 py-4 text-slate-500" dir="ltr">{entry.entity_id || '—'}</td>
                   </tr>
@@ -1643,9 +1798,9 @@ const [plans, setPlans] = useState([]);
 
           {auditTotal > 20 && (
             <div className="flex items-center justify-center gap-4">
-              <button onClick={() => { if (auditPage > 1) { setAuditPage((p) => p - 1); loadAuditLog(); } }} disabled={auditPage <= 1} className={`px-5 py-2.5 rounded-xl font-bold text-sm ${auditPage <= 1 ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-white border border-slate-200 text-slate-600 hover:border-violet-300'}`}>السابق</button>
+              <button onClick={() => { if (auditPage > 1) { setAuditPage((p) => p - 1); loadAuditLog(); } }} disabled={auditPage <= 1} className={`px-5 py-2.5 rounded-xl font-bold text-sm ${auditPage <= 1 ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-white border border-slate-200 text-slate-600 hover:border-teal-300'}`}>السابق</button>
               <span className="text-sm text-slate-500 font-bold">صفحة {auditPage} / {Math.ceil(auditTotal / 20)}</span>
-              <button onClick={() => { if (auditPage < Math.ceil(auditTotal / 20)) { setAuditPage((p) => p + 1); loadAuditLog(); } }} disabled={auditPage >= Math.ceil(auditTotal / 20)} className={`px-5 py-2.5 rounded-xl font-bold text-sm ${auditPage >= Math.ceil(auditTotal / 20) ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-white border border-slate-200 text-slate-600 hover:border-violet-300'}`}>التالي</button>
+              <button onClick={() => { if (auditPage < Math.ceil(auditTotal / 20)) { setAuditPage((p) => p + 1); loadAuditLog(); } }} disabled={auditPage >= Math.ceil(auditTotal / 20)} className={`px-5 py-2.5 rounded-xl font-bold text-sm ${auditPage >= Math.ceil(auditTotal / 20) ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-white border border-slate-200 text-slate-600 hover:border-teal-300'}`}>التالي</button>
             </div>
           )}
         </div>
@@ -1666,7 +1821,7 @@ const [plans, setPlans] = useState([]);
                     </div>
                     <div className="flex items-center gap-3 shrink-0">
                       <label className="flex items-center gap-2 text-sm font-bold text-slate-700 cursor-pointer">
-                        <input type="checkbox" checked={t.enabled !== 0} onChange={(e) => toggleTeacher(t.id, e.target.checked)} className="w-5 h-5 accent-violet-600" />
+                        <input type="checkbox" checked={t.enabled !== 0} onChange={(e) => toggleTeacher(t.id, e.target.checked)} className="w-5 h-5 accent-teal-600" />
                         {t.enabled !== 0 ? 'مفعّل' : 'معطّل'}
                       </label>
                       <button onClick={() => setEditingTeacherSubjects(editingTeacherSubjects === t.id ? null : t.id)} className="bg-slate-100 text-slate-700 text-xs font-black px-4 py-2 rounded-xl hover:bg-slate-200">
@@ -1681,7 +1836,7 @@ const [plans, setPlans] = useState([]);
                         {allSubjects.map((s) => {
                           const assigned = (t.subject_ids || []).includes(s.id);
                           return (
-                            <button key={s.id} onClick={() => toggleTeacherSubject(t.id, s.id)} className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${assigned ? 'bg-violet-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                            <button key={s.id} onClick={() => toggleTeacherSubject(t.id, s.id)} className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${assigned ? 'bg-teal-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
                               {s.icon} {s.name}
                             </button>
                           );
@@ -1723,7 +1878,7 @@ const [plans, setPlans] = useState([]);
                       className="px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold md:col-span-1"
                       placeholder={f.hint}
                     />
-                    <button onClick={() => saveSetting(f.key, settings[f.key] || '')} className="md:justify-self-end px-6 py-3 rounded-xl bg-violet-600 text-white font-extrabold text-sm hover:bg-violet-700 transition-colors">
+                    <button onClick={() => saveSetting(f.key, settings[f.key] || '')} className="md:justify-self-end px-6 py-3 rounded-xl bg-teal-600 text-white font-extrabold text-sm hover:bg-teal-700 transition-colors">
                       حفظ
                     </button>
                   </div>
@@ -1734,7 +1889,7 @@ const [plans, setPlans] = useState([]);
                     <p className="text-xs text-slate-400">تعطيل إظهار أفضل 10 طلاب في صفحة الصدارة</p>
                   </div>
                   <label className="flex items-center gap-2 text-sm font-bold text-slate-700">
-                    <input type="checkbox" className="w-5 h-5 accent-violet-600" checked={settings.leaderboard_enabled !== '0'}
+                    <input type="checkbox" className="w-5 h-5 accent-teal-600" checked={settings.leaderboard_enabled !== '0'}
                       onChange={(e) => saveSetting('leaderboard_enabled', e.target.checked ? '1' : '0')} />
                     مفعّلة
                   </label>
@@ -1743,6 +1898,38 @@ const [plans, setPlans] = useState([]);
                 {error && <div><Alert>{error}</Alert></div>}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {rejectModal.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setRejectModal({ ...rejectModal, open: false })}>
+          <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full mx-4 animate-fade-up" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-xl font-black text-slate-900 mb-2">❌ رفض {rejectModal.type === 'lesson' ? 'الدرس' : 'الاختبار'}</h3>
+            <p className="text-sm text-slate-500 mb-4">أدخل سبب الرفض ليتمكن {rejectModal.type === 'lesson' ? 'المعلم' : 'المعلم'} من التعديل.</p>
+            <textarea
+              value={rejectModal.notes}
+              onChange={(e) => setRejectModal({ ...rejectModal, notes: e.target.value })}
+              placeholder="مثال: يرجى إضافة فيديو للدرس..."
+              rows={3}
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-400 text-sm resize-none mb-4"
+              autoFocus
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={submitRejection}
+                disabled={!rejectModal.notes.trim()}
+                className="flex-1 bg-red-600 text-white font-bold py-3 rounded-xl hover:bg-red-700 transition-colors disabled:opacity-50"
+              >
+                تأكيد الرفض
+              </button>
+              <button
+                onClick={() => setRejectModal({ ...rejectModal, open: false })}
+                className="flex-1 bg-slate-100 text-slate-700 font-bold py-3 rounded-xl hover:bg-slate-200 transition-colors"
+              >
+                إلغاء
+              </button>
+            </div>
           </div>
         </div>
       )}

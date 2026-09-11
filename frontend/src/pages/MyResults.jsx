@@ -31,7 +31,7 @@ export default function MyResults() {
       <Breadcrumbs items={[{ label: 'نتائجي' }]} />
       <div className="flex items-center justify-between mb-10">
         <h1 className="text-3xl font-black text-slate-900">📝 نتائجي</h1>
-        <Link to="/exams" className="bg-violet-600 text-white font-bold px-6 py-3 rounded-xl hover:bg-violet-700 transition-colors text-sm">اختبار جديد</Link>
+        <Link to="/exams" className="bg-teal-600 text-white font-bold px-6 py-3 rounded-xl hover:bg-teal-700 transition-colors text-sm">اختبار جديد</Link>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
@@ -42,7 +42,7 @@ export default function MyResults() {
         </div>
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 text-center">
           <div className="text-3xl mb-2">📊</div>
-          <p className="text-3xl font-black text-violet-700">{avg}%</p>
+          <p className="text-3xl font-black text-teal-700">{avg}%</p>
           <p className="text-sm text-slate-500">متوسط النتائج</p>
         </div>
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 text-center">
@@ -63,12 +63,12 @@ export default function MyResults() {
           { id: 'passed', label: `ناجح (${results.filter((r) => r.score >= 60).length})` },
           { id: 'failed', label: `يحتاج تدريب (${results.filter((r) => r.score < 60).length})` },
         ].map((f) => (
-          <button key={f.id} onClick={() => setFilter(f.id)} className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-colors ${filter === f.id ? 'bg-violet-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:border-violet-300'}`}>
+          <button key={f.id} onClick={() => setFilter(f.id)} className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-colors ${filter === f.id ? 'bg-teal-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:border-teal-300'}`}>
             {f.label}
           </button>
         ))}
         {subjects.map((s) => (
-          <button key={s} onClick={() => setFilter(s)} className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-colors ${filter === s ? 'bg-violet-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:border-violet-300'}`}>
+          <button key={s} onClick={() => setFilter(s)} className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-colors ${filter === s ? 'bg-teal-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:border-teal-300'}`}>
             {s}
           </button>
         ))}
@@ -90,7 +90,7 @@ export default function MyResults() {
               <div className="relative w-20 h-20 shrink-0">
                 <svg className="w-20 h-20 -rotate-90" viewBox="0 0 100 100">
                   <circle cx="50" cy="50" r="42" fill="none" stroke="#f1f5f9" strokeWidth="10" />
-                  <circle cx="50" cy="50" r="42" fill="none" stroke={r.score >= 60 ? '#7c3aed' : '#ef4444'} strokeWidth="10" strokeLinecap="round" strokeDasharray={`${(r.score / 100) * 263.9} 263.9`} />
+                  <circle cx="50" cy="50" r="42" fill="none" stroke={r.score >= 60 ? '#0d9488' : '#ef4444'} strokeWidth="10" strokeLinecap="round" strokeDasharray={`${(r.score / 100) * 263.9} 263.9`} />
                 </svg>
                 <div className="absolute inset-0 flex items-center justify-center font-black text-slate-900">{r.score}%</div>
               </div>
@@ -100,7 +100,7 @@ export default function MyResults() {
                 <p className="text-xs text-slate-400 mt-1">⏱️ {r.duration_minutes} دقيقة</p>
               </div>
               <div className="text-left">
-                <span className={`inline-block px-4 py-2 rounded-full text-sm font-black ${r.score >= 85 ? 'bg-green-100 text-green-700' : r.score >= 60 ? 'bg-violet-100 text-violet-700' : 'bg-red-100 text-red-600'}`}>
+                <span className={`inline-block px-4 py-2 rounded-full text-sm font-black ${r.score >= 85 ? 'bg-green-100 text-green-700' : r.score >= 60 ? 'bg-teal-100 text-teal-700' : 'bg-red-100 text-red-600'}`}>
                   {r.score >= 85 ? 'ممتاز 🏆' : r.score >= 60 ? 'جيد ✓' : 'يحتاج تدريب'}
                 </span>
                 <p className="text-xs text-slate-400 mt-2" dir="ltr">{r.created_at?.slice(0, 10)}</p>

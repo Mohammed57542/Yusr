@@ -61,11 +61,11 @@ export default function Library() {
 
   return (
     <div>
-      <div className="bg-gradient-to-br from-violet-700 via-purple-800 to-indigo-900 text-white">
+      <div className="bg-gradient-to-br from-teal-700 via-cyan-800 to-night text-white">
         <div className="max-w-7xl mx-auto px-4 py-16 text-center">
           <span className="inline-block px-4 py-1.5 rounded-full bg-white/10 border border-white/20 text-sm font-bold mb-5">مكتبة يُسر</span>
           <h1 className="text-4xl md:text-5xl font-black mb-4">ملخصات وملفات تعليمية</h1>
-          <p className="text-violet-200 text-lg max-w-2xl mx-auto">ملخصات، أوراق عمل، مراجعات، ونماذج اختبارات جاهزة للتحميل والعرض.</p>
+          <p className="text-teal-200 text-lg max-w-2xl mx-auto">ملخصات، أوراق عمل، مراجعات، ونماذج اختبارات جاهزة للتحميل والعرض.</p>
           <div className="max-w-xl mx-auto mt-8">
             <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="🔍 ابحث في المكتبة..." className="w-full px-6 py-4 rounded-2xl bg-white text-slate-900 placeholder-slate-400 font-medium focus:outline-none focus:ring-4 focus:ring-white/30 shadow-2xl" />
           </div>
@@ -76,24 +76,24 @@ export default function Library() {
         {lockedInfo && (
           <div className="mb-8">
             <LockedContent subjectName={lockedInfo.subject_name} icon="📄🔒" />
-            <button onClick={() => { setLockedInfo(null); updateParam('file', ''); }} className="block mx-auto text-slate-500 text-sm font-bold hover:text-violet-600">← العودة للمكتبة</button>
+            <button onClick={() => { setLockedInfo(null); updateParam('file', ''); }} className="block mx-auto text-slate-500 text-sm font-bold hover:text-teal-600">← العودة للمكتبة</button>
           </div>
         )}
 
         <div className="flex flex-wrap gap-2 mb-6">
           {TYPES.map((t) => (
-            <button key={t} onClick={() => updateParam('type', t === 'الكل' ? '' : t)} className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${type === t ? 'bg-violet-600 text-white shadow-lg shadow-violet-200' : 'bg-white border border-slate-200 text-slate-600 hover:border-violet-300'}`}>
+            <button key={t} onClick={() => updateParam('type', t === 'الكل' ? '' : t)} className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${type === t ? 'bg-teal-600 text-white shadow-lg shadow-teal-200' : 'bg-white border border-slate-200 text-slate-600 hover:border-teal-300'}`}>
               {t === 'الكل' ? '🗂️ الكل' : t}
             </button>
           ))}
         </div>
 
         <div className="flex flex-wrap gap-4 mb-8">
-          <select value={subject} onChange={(e) => updateParam('subject', e.target.value)} className="px-4 py-3 rounded-2xl border border-slate-200 bg-white text-sm font-bold focus:outline-none focus:ring-2 focus:ring-violet-400">
+          <select value={subject} onChange={(e) => updateParam('subject', e.target.value)} className="px-4 py-3 rounded-2xl border border-slate-200 bg-white text-sm font-bold focus:outline-none focus:ring-2 focus:ring-teal-400">
             <option value="">جميع المواد</option>
             {subjects.map((s) => <option key={s.id} value={s.id}>{s.icon} {s.name}</option>)}
           </select>
-          <select value={grade} onChange={(e) => updateParam('grade', e.target.value)} className="px-4 py-3 rounded-2xl border border-slate-200 bg-white text-sm font-bold focus:outline-none focus:ring-2 focus:ring-violet-400">
+          <select value={grade} onChange={(e) => updateParam('grade', e.target.value)} className="px-4 py-3 rounded-2xl border border-slate-200 bg-white text-sm font-bold focus:outline-none focus:ring-2 focus:ring-teal-400">
             <option value="">جميع الصفوف</option>
             {[8, 9, 10, 11, 12].map((g) => <option key={g} value={g}>الصف {g}</option>)}
           </select>
@@ -135,7 +135,7 @@ export default function Library() {
                 <div className="flex items-start gap-4 mb-4">
                   <div className="w-14 h-14 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center text-2xl shrink-0">📕</div>
                   <div className="min-w-0">
-                    <span className="inline-block px-2.5 py-0.5 rounded-full bg-violet-100 text-violet-700 text-xs font-bold mb-1">{f.type}</span>
+                    <span className="inline-block px-2.5 py-0.5 rounded-full bg-teal-100 text-teal-700 text-xs font-bold mb-1">{f.type}</span>
                     <h3 className="font-extrabold text-slate-900 leading-6 line-clamp-2">{f.title}</h3>
                   </div>
                 </div>
@@ -149,7 +149,7 @@ export default function Library() {
                     <Link to="/pricing" className="flex-1 bg-slate-100 text-slate-500 font-bold py-2.5 rounded-xl text-sm text-center hover:bg-slate-200 transition-colors">🔒 للمشتركين — اشترك</Link>
                   ) : (
                     <>
-                      <button onClick={() => setViewer(f)} className="flex-1 bg-violet-600 text-white font-bold py-2.5 rounded-xl text-sm hover:bg-violet-700 transition-colors">عرض</button>
+                      <button onClick={() => setViewer(f)} className="flex-1 bg-teal-600 text-white font-bold py-2.5 rounded-xl text-sm hover:bg-teal-700 transition-colors">عرض</button>
                       <button onClick={() => downloadFile(f)} className="flex-1 bg-slate-100 text-slate-700 font-bold py-2.5 rounded-xl text-sm hover:bg-slate-200 transition-colors">📥 تحميل</button>
                     </>
                   )}
@@ -175,7 +175,7 @@ export default function Library() {
             </div>
             <pre className="bg-slate-50 rounded-2xl p-5 text-sm text-slate-700 leading-7 whitespace-pre-wrap font-sans">{viewer.content || 'لا يوجد محتوى نصي.'}</pre>
             <div className="flex gap-3 mt-6">
-              <button onClick={() => downloadFile(viewer)} className="flex-1 bg-violet-600 text-white font-extrabold py-3.5 rounded-2xl hover:bg-violet-700 transition-colors">📥 تحميل الملف</button>
+              <button onClick={() => downloadFile(viewer)} className="flex-1 bg-teal-600 text-white font-extrabold py-3.5 rounded-2xl hover:bg-teal-700 transition-colors">📥 تحميل الملف</button>
               <a href={waLink(`أرغب في الحصول على الملف: ${viewer.title}`, settings)} target="_blank" rel="noreferrer" className="flex-1 text-center bg-green-600 text-white font-extrabold py-3.5 rounded-2xl hover:bg-green-700 transition-colors">💬 اطلبه واتساب</a>
             </div>
           </div>

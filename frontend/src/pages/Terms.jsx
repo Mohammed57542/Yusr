@@ -34,7 +34,7 @@ export default function Terms() {
       </div>
 
       <div className="mt-12 text-center">
-        <Link to="/contact" className="text-violet-600 font-bold">لديك استفسار؟ تواصل معنا ←</Link>
+        <Link to="/contact" className="text-teal-600 font-bold">لديك استفسار؟ تواصل معنا ←</Link>
       </div>
     </div>
   );

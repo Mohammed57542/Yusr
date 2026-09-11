@@ -30,7 +30,7 @@ export default function Privacy() {
       </div>
 
       <div className="mt-12 text-center">
-        <Link to="/contact" className="text-violet-600 font-bold">تواصل معنا بخصوص أي استفسار ←</Link>
+        <Link to="/contact" className="text-teal-600 font-bold">تواصل معنا بخصوص أي استفسار ←</Link>
       </div>
     </div>
   );

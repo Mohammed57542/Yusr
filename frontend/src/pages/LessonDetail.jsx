@@ -20,6 +20,8 @@ export default function LessonDetail() {
   const [message, setMessage] = useState('');
   const [notes, setNotes] = useState('');
   const [savingNotes, setSavingNotes] = useState(false);
+  const [showPdf, setShowPdf] = useState(false);
+  const [nextLesson, setNextLesson] = useState(null);
   const videoRef = useRef(null);
   const lastSaveRef = useRef(0);
 
@@ -27,10 +29,28 @@ export default function LessonDetail() {
     setLoading(true);
     setLockedInfo(null);
     Promise.all([api.get(`/lessons/${id}`), api.get(`/lessons/${id}/related`)])
-      .then(([l, r]) => { setLesson(l); setRelated(r); })
+      .then(([l, r]) => {
+        setLesson(l);
+        setRelated(r);
+        if (l && r.length > 0) {
+          const currentIdx = r.findIndex((rel) => rel.id === Number(id));
+          if (currentIdx >= 0 && currentIdx < r.length - 1) {
+            setNextLesson(r[currentIdx + 1]);
+          } else if (r.length > 0) {
+            setNextLesson(r[0]);
+          }
+        }
+      })
       .catch((e) => { if (e.data?.locked) setLockedInfo(e.data); else if (e.message.includes('غير موجود')) setLesson(null); })
       .finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    if (!user || !id) return;
+    api.get(`/student/notes/${id}`)
+      .then((d) => { if (d?.content) setNotes(d.content); })
+      .catch(() => {});
+  }, [id, user]);
 
   const refreshUserState = async () => {
     if (!user) return;
@@ -46,7 +66,6 @@ export default function LessonDetail() {
 
   useEffect(() => { refreshUserState(); }, [id, user]);
 
-  // حفظ تقدم المشاهدة على الخادم (كل 5 ثوانٍ)
   const saveWatch = useCallback(async (pos, pct, done) => {
     if (!user) return;
     const now = Date.now();
@@ -96,6 +115,12 @@ export default function LessonDetail() {
 
   const fmt = (sec) => `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, '0')}`;
 
+  const objectives = lesson.objectives
+    ? lesson.objectives.split('\n').filter((x) => x.trim())
+    : lesson.description
+      ? lesson.description.split('،').filter((x) => x.trim())
+      : [];
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-10">
       <Breadcrumbs items={[
@@ -106,6 +131,7 @@ export default function LessonDetail() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
+          {/* ── Video Player ── */}
           <div className="relative rounded-3xl overflow-hidden shadow-2xl mb-6 bg-black" style={{ aspectRatio: '16/9' }}>
             {!locked ? (
               lesson.video_url ? (
@@ -122,7 +148,6 @@ export default function LessonDetail() {
                     ref={videoRef}
                     className="absolute inset-0 w-full h-full"
                     src={lesson.video_url}
-                    poster={lesson.pdf_url || undefined}
                     controls
                     preload="metadata"
                     onTimeUpdate={onTimeUpdate}
@@ -135,14 +160,14 @@ export default function LessonDetail() {
                   <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)', backgroundSize: '20px 20px' }} />
                   <div className="w-20 h-20 rounded-full bg-white/20 border-2 border-white/40 backdrop-blur flex items-center justify-center text-3xl mb-4">🎬</div>
                   <div className="bg-black/30 backdrop-blur rounded-full px-5 py-2 text-sm font-bold">{lesson.title} • {lesson.duration} دقيقة</div>
-                  <p className="text-white/80 text-xs mt-3">سيُرفع فيديو هذا الدرس قريباً — تابع {lesson.teacher_name || 'معلمك'} من هنا</p>
+                  <p className="text-white/80 text-xs mt-3">سيُرفع فيديو هذا الدرس قريباً</p>
                 </div>
               )
             ) : (
               <div className="absolute inset-0 flex flex-col items-center justify-center text-white" style={{ background: `linear-gradient(135deg, ${lesson.subject_color}, ${lesson.subject_color}99)` }}>
                 <div className="text-5xl mb-4">🔒</div>
                 <h3 className="text-2xl font-black mb-2">هذا الدرس للمشتركين في {lesson.subject_name} فقط</h3>
-                <p className="text-violet-100 mb-6 max-w-md mx-auto text-center px-4">اشترك بالمادة الآن واحصل على الوصول الكامل لجميع الحصص والملخصات والاختبارات.</p>
+                <p className="text-teal-100 mb-6 max-w-md mx-auto text-center px-4">اشترك بالمادة الآن واحصل على الوصول الكامل لجميع الدروس والملخصات والاختبارات.</p>
                 <Link to="/pricing" className="inline-block bg-amber-400 text-slate-900 font-extrabold px-8 py-3.5 rounded-2xl hover:-translate-y-0.5 transition-all">اشترك الآن</Link>
               </div>
             )}
@@ -151,16 +176,25 @@ export default function LessonDetail() {
                 تقدمك: {watch.watch_percent}% {watch.last_position > 5 && `• استُئنف من ${fmt(watch.last_position)}`}
               </div>
             )}
+            {!locked && watch.started && (
+              <div className="absolute bottom-3 left-3 right-3">
+                <div className="h-1 bg-white/30 rounded-full overflow-hidden">
+                  <div className="h-full bg-teal-400 rounded-full transition-all" style={{ width: `${watch.watch_percent || 0}%` }} />
+                </div>
+              </div>
+            )}
           </div>
 
           {message && <div className="mb-5"><Alert type="info">{message}</Alert></div>}
           {earnedPoints && <div className="mb-5"><Alert type="success">🎉 مبروك! أكملت الدرس وحصلت على {earnedPoints} نقطة</Alert></div>}
 
+          {/* ── Lesson Info ── */}
           <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-7 mb-6">
             <div className="flex flex-wrap items-center gap-2 mb-4">
               <Badge>{lesson.subject_name}</Badge>
               <Badge color="bg-slate-100 text-slate-600">{lesson.grade_name}</Badge>
               <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${difficultyColor(lesson.level)}`}>{lesson.level}</span>
+              {lesson.duration > 0 && <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600">⏱️ {lesson.duration} دقيقة</span>}
               <span className="text-xs text-slate-400 mr-auto">👁️ {lesson.views.toLocaleString('ar-EG')} مشاهدة</span>
             </div>
             <h1 className="text-2xl md:text-3xl font-black text-slate-900 mb-4">{lesson.title}</h1>
@@ -170,8 +204,9 @@ export default function LessonDetail() {
             <p className="text-slate-600 leading-8">{lesson.description}</p>
           </div>
 
+          {/* ── Action Buttons ── */}
           <div className="grid grid-cols-2 gap-4 mb-6">
-            <button onClick={toggleComplete} className={`flex items-center justify-center gap-2 rounded-2xl py-4 font-extrabold transition-all ${completed ? 'bg-green-600 text-white' : 'bg-violet-600 text-white hover:bg-violet-700'}`}>
+            <button onClick={toggleComplete} className={`flex items-center justify-center gap-2 rounded-2xl py-4 font-extrabold transition-all ${completed ? 'bg-green-600 text-white' : 'bg-teal-600 text-white hover:bg-teal-700'}`}>
               {completed ? '✓ أكملت هذا الدرس' : 'أكملت الدرس (+10 نقاط)'}
             </button>
             <button onClick={toggleFavorite} className={`flex items-center justify-center gap-2 rounded-2xl py-4 font-extrabold border-2 transition-all ${favorited ? 'bg-amber-50 border-amber-400 text-amber-700' : 'border-slate-200 text-slate-700 hover:border-amber-300'}`}>
@@ -179,36 +214,90 @@ export default function LessonDetail() {
             </button>
           </div>
 
-          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-7">
-            <h2 className="text-xl font-extrabold text-slate-900 mb-4">🎯 ماذا ستتعلم في هذا الدرس؟</h2>
-            <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {lesson.description.split('،').filter((x) => x.trim()).map((point, i) => (
-                <li key={i} className="flex items-start gap-2 text-slate-600 text-sm">
-                  <span className="text-violet-600 mt-0.5">✓</span> {point.trim()}
-                </li>
-              ))}
-            </ul>
-          </div>
+          {/* ── Learning Objectives ── */}
+          {objectives.length > 0 && (
+            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-7 mb-6">
+              <h2 className="text-xl font-extrabold text-slate-900 mb-4">🎯 ماذا ستتعلم في هذا الدرس؟</h2>
+              <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {objectives.map((point, i) => (
+                  <li key={i} className="flex items-start gap-2 text-slate-600 text-sm">
+                    <span className="text-teal-600 mt-0.5">✓</span> {point.trim()}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
+          {/* ── PDF Viewer ── */}
+          {lesson.pdf_url && !locked && (
+            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-7 mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-extrabold text-slate-900">📄 ملخص الدرس</h2>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowPdf(!showPdf)}
+                    className="text-teal-600 text-sm font-bold hover:text-teal-700 transition-colors"
+                  >
+                    {showPdf ? 'إخفاء' : 'عرض'}
+                  </button>
+                  <a
+                    href={lesson.pdf_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-slate-500 text-sm font-bold hover:text-slate-700 transition-colors"
+                  >
+                    تحميل ←
+                  </a>
+                </div>
+              </div>
+              {showPdf && (
+                <div className="rounded-2xl overflow-hidden border border-slate-200" style={{ height: '600px' }}>
+                  <iframe
+                    src={lesson.pdf_url}
+                    className="w-full h-full"
+                    title={`ملخص ${lesson.title}`}
+                  />
+                </div>
+              )}
+              {!showPdf && (
+                <div
+                  className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 hover:bg-teal-50 transition-colors cursor-pointer"
+                  onClick={() => setShowPdf(true)}
+                >
+                  <div className="w-12 h-12 rounded-xl bg-red-100 flex items-center justify-center text-xl">📄</div>
+                  <div className="flex-1">
+                    <p className="font-bold text-sm text-slate-800">ملخص الدرس</p>
+                    <p className="text-xs text-slate-400">اضغط لعرض الملف أو تحميله</p>
+                  </div>
+                  <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" /></svg>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Notes ── */}
           {user && (
-            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-7 mt-6">
+            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-7">
               <h2 className="text-xl font-extrabold text-slate-900 mb-4">📝 ملاحظاتي على هذا الدرس</h2>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="اكتب ملاحظاتك هنا... مثال: أعد مراجعة قسم الاشتقاق مرة أخرى"
                 rows={4}
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-violet-400 text-sm resize-none"
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-400 text-sm resize-none"
               />
               <div className="flex items-center justify-between mt-3">
                 <p className="text-xs text-slate-400">{notes.length}/500 حرف</p>
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     setSavingNotes(true);
-                    setTimeout(() => setSavingNotes(false), 800);
+                    try {
+                      await api.put(`/student/notes/${id}`, { content: notes });
+                    } catch {}
+                    setSavingNotes(false);
                   }}
                   disabled={savingNotes}
-                  className="bg-violet-600 text-white font-bold px-5 py-2 rounded-xl text-sm hover:bg-violet-700 transition-colors disabled:opacity-50"
+                  className="bg-teal-600 text-white font-bold px-5 py-2 rounded-xl text-sm hover:bg-teal-700 transition-colors disabled:opacity-50"
                 >
                   {savingNotes ? 'جارٍ الحفظ...' : '💾 حفظ الملاحظات'}
                 </button>
@@ -218,15 +307,33 @@ export default function LessonDetail() {
         </div>
 
         <aside className="space-y-5">
+          {/* ── Next Lesson ── */}
+          {nextLesson && !locked && (
+            <div className="bg-gradient-to-br from-teal-600 to-cyan-700 rounded-3xl p-6 text-white">
+              <p className="text-teal-200 text-xs font-bold mb-2">الدرس التالي المقترح</p>
+              <div className="flex items-center gap-3 mb-3">
+                <span className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-lg">{nextLesson.subject_icon || '📚'}</span>
+                <p className="font-bold text-sm leading-5 line-clamp-2">{nextLesson.title}</p>
+              </div>
+              <Link
+                to={`/lessons/${nextLesson.id}`}
+                className="block text-center bg-white text-teal-700 font-extrabold py-3 rounded-xl hover:-translate-y-0.5 transition-all"
+              >
+                انتقل للدرس التالي ←
+              </Link>
+            </div>
+          )}
+
+          {/* ── Related Lessons ── */}
           <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 sticky top-20">
             <h3 className="font-extrabold text-slate-900 mb-4">دروس ذات صلة</h3>
             {related.length === 0 ? <p className="text-sm text-slate-400">لا توجد دروس ذات صلة</p> : (
               <div className="space-y-3">
                 {related.map((r) => (
-                  <Link key={r.id} to={`/lessons/${r.id}`} className="flex items-center gap-3 p-3 rounded-xl hover:bg-violet-50 transition-colors group">
+                  <Link key={r.id} to={`/lessons/${r.id}`} className="flex items-center gap-3 p-3 rounded-xl hover:bg-teal-50 transition-colors group">
                     <div className="w-12 h-12 rounded-xl flex items-center justify-center text-xl shrink-0" style={{ background: `${r.subject_color}1a` }}>{r.subject_icon}</div>
                     <div className="min-w-0">
-                      <p className="text-sm font-bold text-slate-800 group-hover:text-violet-700 leading-5 line-clamp-2">{r.title}</p>
+                      <p className="text-sm font-bold text-slate-800 group-hover:text-teal-700 leading-5 line-clamp-2">{r.title}</p>
                       <p className="text-xs text-slate-400 mt-0.5">👁️ {r.views.toLocaleString('ar-EG')}</p>
                     </div>
                   </Link>
@@ -234,7 +341,7 @@ export default function LessonDetail() {
               </div>
             )}
             <div className="border-t border-slate-100 mt-5 pt-5 space-y-2">
-              <Link to={`/exams?subject=${lesson.subject_id}`} className="block w-full text-center bg-violet-600 text-white font-bold py-3 rounded-xl hover:bg-violet-700 transition-colors">📝 اختبر نفسك</Link>
+              <Link to={`/exams?subject=${lesson.subject_id}`} className="block w-full text-center bg-teal-600 text-white font-bold py-3 rounded-xl hover:bg-teal-700 transition-colors">📝 اختبر نفسك</Link>
               <Link to={`/question-bank?subject=${lesson.subject_id}`} className="block w-full text-center bg-slate-100 text-slate-700 font-bold py-3 rounded-xl hover:bg-slate-200 transition-colors">بنك الأسئلة</Link>
               <Link to="/ai-assistant" className="block w-full text-center bg-gradient-to-l from-emerald-500 to-green-600 text-white font-bold py-3 rounded-xl hover:brightness-110 transition-all">🤖 اسأل مساعد يُسر</Link>
             </div>

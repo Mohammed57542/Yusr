@@ -1,91 +1,102 @@
-import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { api } from '../api/client';
-import { useAuth } from '../context/AuthContext';
-import { Loading, EmptyState } from '../components/common';
-
-const ICONS = { session: '🔔', exam: '📝', resource: '📖', offer: '🎁', subscription: '✅', info: 'ℹ️', points: '🏅', system: '⚙️' };
 
 export default function Notifications() {
-  const { user, loading: authLoading } = useAuth();
-  const navigate = useNavigate();
-  const [notifs, setNotifs] = useState([]);
+  const [data, setData] = useState({ items: [], total: 0, unread: 0 });
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('all');
 
-  useEffect(() => {
-    if (authLoading) return;
-    if (!user) { navigate('/login'); return; }
-    api.get('/notifications').then(setNotifs).finally(() => setLoading(false));
-  }, [user, authLoading, navigate]);
-
-  const readAll = async () => {
-    try {
-      await api.post('/notifications/read-all');
-      setNotifs((prev) => prev.map((n) => ({ ...n, read: 1 })));
-    } catch {}
+  const load = () => {
+    api.get('/notifications')
+      .then(setData)
+      .catch(() => {})
+      .finally(() => setLoading(false));
   };
 
-  if (!user) return null;
-  if (loading) return <Loading />;
+  useEffect(load, []);
 
-  const unread = notifs.filter((n) => !n.read).length;
-  const filtered = filter === 'all' ? notifs : filter === 'unread' ? notifs.filter((n) => !n.read) : notifs.filter((n) => n.type === filter);
+  const markRead = async (id) => {
+    await api.patch(`/notifications/${id}/read`);
+    setData(prev => ({
+      ...prev,
+      items: prev.items.map(n => n.id === id ? { ...n, read: 1 } : n),
+      unread: Math.max(0, prev.unread - 1),
+    }));
+  };
 
-  const formatDate = (iso) => (iso ? String(iso).replace('T', ' ').slice(0, 16) : '');
+  const markAllRead = async () => {
+    await api.patch('/notifications/read-all');
+    setData(prev => ({
+      ...prev,
+      items: prev.items.map(n => ({ ...n, read: 1 })),
+      unread: 0,
+    }));
+  };
+
+  const clearAll = async () => {
+    if (!confirm('هل تريد مسح جميع الإشعارات؟')) return;
+    await api.del('/notifications');
+    setData({ items: [], total: 0, unread: 0 });
+  };
+
+  if (loading) return <div className="flex justify-center py-20"><div className="w-10 h-10 border-4 border-teal-500 border-t-transparent rounded-full animate-spin" /></div>;
+
+  const typeIcon = (type) => {
+    switch (type) {
+      case 'success': return '✅';
+      case 'warning': return '⚠️';
+      case 'error': return '❌';
+      default: return '🔔';
+    }
+  };
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-14">
+    <div className="max-w-3xl mx-auto px-4 py-10" dir="rtl">
       <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-black text-slate-900">🔔 الإشعارات</h1>
-          <p className="text-slate-500 mt-1">{unread > 0 ? `${unread} إشعارات غير مقروءة` : 'لا توجد إشعارات جديدة'}</p>
+        <h1 className="text-3xl font-black text-slate-800">🔔 الإشعارات</h1>
+        <div className="flex gap-2">
+          {data.unread > 0 && (
+            <button onClick={markAllRead} className="text-sm text-teal-600 font-bold hover:underline">
+              قراءة الكل ({data.unread})
+            </button>
+          )}
+          {data.items.length > 0 && (
+            <button onClick={clearAll} className="text-sm text-red-500 font-bold hover:underline">
+              مسح الكل
+            </button>
+          )}
         </div>
-        {unread > 0 && <button onClick={readAll} className="bg-violet-600 text-white font-bold px-5 py-2.5 rounded-xl text-sm hover:bg-violet-700 transition-colors">تحديد الكل كمقروء</button>}
       </div>
 
-      <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-        {[
-          { id: 'all', label: `الكل (${notifs.length})` },
-          { id: 'unread', label: `غير مقروء (${unread})` },
-          { id: 'exam', label: '📝 اختبارات' },
-          { id: 'session', label: '🔔 حصص' },
-          { id: 'points', label: '🏅 نقاط' },
-          { id: 'offer', label: '🎁 عروض' },
-        ].map((f) => (
-          <button key={f.id} onClick={() => setFilter(f.id)} className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-colors ${filter === f.id ? 'bg-violet-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:border-violet-300'}`}>
-            {f.label}
-          </button>
-        ))}
-      </div>
-
-      {notifs.length === 0 ? (
-        <EmptyState icon="🔔" title="لا توجد إشعارات" description="ستصلك تنبيهات الحصص والاختبارات والملفات الجديدة هنا" />
-      ) : filtered.length === 0 ? (
-        <EmptyState icon="✅" title="لا إشعارات في هذا التصنيف" description="جميع إشعاراتك مقروءة في هذا التصنيف" />
+      {data.items.length === 0 ? (
+        <div className="text-center py-20">
+          <div className="text-5xl mb-4">🔕</div>
+          <p className="text-slate-500 font-medium">لا توجد إشعارات</p>
+        </div>
       ) : (
         <div className="space-y-3">
-          {filtered.map((n) => (
-            <div key={n.id} className={`bg-white rounded-3xl border p-5 flex items-start gap-4 transition-all ${n.read ? 'border-slate-100 opacity-70' : 'border-violet-200 shadow-md'}`}>
-              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shrink-0 ${n.read ? 'bg-slate-100' : 'bg-violet-100'}`}>
-                {ICONS[n.type] || 'ℹ️'}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-2">
-                  <h3 className="font-extrabold text-slate-900">{n.title}</h3>
-                  {!n.read && <span className="w-2.5 h-2.5 rounded-full bg-violet-600 shrink-0" />}
+          {data.items.map(n => (
+            <div
+              key={n.id}
+              onClick={() => !n.read && markRead(n.id)}
+              className={`p-4 rounded-2xl border transition-all cursor-pointer ${
+                n.read
+                  ? 'bg-white border-slate-200'
+                  : 'bg-teal-50 border-teal-200 hover:bg-teal-100'
+              }`}
+            >
+              <div className="flex items-start gap-3">
+                <span className="text-xl mt-0.5">{typeIcon(n.type)}</span>
+                <div className="flex-1">
+                  <h3 className={`font-bold text-sm ${n.read ? 'text-slate-600' : 'text-slate-800'}`}>{n.title}</h3>
+                  <p className="text-sm text-slate-500 mt-1">{n.body}</p>
+                  <span className="text-xs text-slate-400 mt-2 block">{new Date(n.created_at).toLocaleDateString('ar-OM')}</span>
                 </div>
-                <p className="text-sm text-slate-500 leading-6 mt-1">{n.body}</p>
-                <p className="text-xs text-slate-400 mt-2" dir="ltr">{formatDate(n.created_at)}</p>
+                {!n.read && <div className="w-2.5 h-2.5 bg-teal-500 rounded-full mt-2" />}
               </div>
             </div>
           ))}
         </div>
       )}
-
-      <div className="mt-10 text-center">
-        <Link to="/live-sessions" className="text-violet-600 font-bold text-sm">تفقّد الحصص القادمة ←</Link>
-      </div>
     </div>
   );
 }

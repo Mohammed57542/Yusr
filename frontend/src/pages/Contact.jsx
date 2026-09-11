@@ -38,11 +38,11 @@ export default function Contact() {
 
   return (
     <div>
-      <div className="bg-gradient-to-br from-violet-700 via-purple-800 to-indigo-900 text-white">
+      <div className="bg-gradient-to-br from-teal-700 via-cyan-800 to-night text-white">
         <div className="max-w-7xl mx-auto px-4 py-16 text-center">
           <span className="inline-block px-4 py-1.5 rounded-full bg-white/10 border border-white/20 text-sm font-bold mb-5">تواصل معنا</span>
           <h1 className="text-4xl md:text-5xl font-black mb-4">نحن هنا لمساعدتك</h1>
-          <p className="text-violet-200 text-lg max-w-2xl mx-auto">فريقنا جاهز للإجابة على جميع استفساراتك على مدار الساعة.</p>
+          <p className="text-teal-200 text-lg max-w-2xl mx-auto">فريقنا جاهز للإجابة على جميع استفساراتك على مدار الساعة.</p>
         </div>
       </div>
 
@@ -52,7 +52,7 @@ export default function Contact() {
             <div className="space-y-5 mb-8">
               {cards.map((c) => (
                 <a key={c.title} href={c.href} target={c.href.startsWith('http') ? '_blank' : undefined} rel="noreferrer" className="flex items-center gap-4 bg-white rounded-3xl border border-slate-100 shadow-sm p-6 hover:shadow-lg hover:-translate-y-0.5 transition-all">
-                  <div className="w-14 h-14 rounded-2xl bg-violet-50 flex items-center justify-center text-2xl shrink-0">{c.icon}</div>
+                  <div className="w-14 h-14 rounded-2xl bg-teal-50 flex items-center justify-center text-2xl shrink-0">{c.icon}</div>
                   <div>
                     <p className="text-sm text-slate-500">{c.title}</p>
                     <p className="font-extrabold text-slate-900" dir="ltr">{c.value}</p>
@@ -61,9 +61,9 @@ export default function Contact() {
               ))}
             </div>
 
-            <div className="bg-gradient-to-l from-violet-600 to-purple-700 text-white rounded-3xl p-8">
+            <div className="bg-gradient-to-l from-teal-600 to-cyan-700 text-white rounded-3xl p-8">
               <h3 className="text-xl font-extrabold mb-2">ساعات العمل</h3>
-              <div className="space-y-2 text-violet-100 text-sm">
+              <div className="space-y-2 text-teal-100 text-sm">
                 <p>الأحد - الخميس: 8 صباحاً - 9 مساءً</p>
                 <p>الجمعة - السبت: 10 صباحاً - 6 مساءً</p>
               </div>
@@ -83,7 +83,7 @@ export default function Contact() {
                 <Input label="البريد الإلكتروني" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required dir="ltr" />
                 <div>
                   <label className="block text-sm font-bold text-slate-700 mb-1.5">نوع الاستفسار</label>
-                  <select value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-violet-400">
+                  <select value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-teal-400">
                     <option value="">اختر نوع الاستفسار</option>
                     {INQUIRY_TYPES.map((t) => <option key={t}>{t}</option>)}
                   </select>
@@ -91,9 +91,9 @@ export default function Contact() {
               </div>
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-1.5">الرسالة</label>
-                <textarea value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} rows="5" required placeholder="اكتب رسالتك هنا..." className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-violet-400 resize-none" />
+                <textarea value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} rows="5" required placeholder="اكتب رسالتك هنا..." className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-400 resize-none" />
               </div>
-              <button type="submit" className="w-full bg-gradient-to-l from-violet-600 to-purple-700 text-white font-extrabold py-4 rounded-2xl hover:-translate-y-0.5 transition-all shadow-lg shadow-violet-200">
+              <button type="submit" className="w-full bg-gradient-to-l from-teal-600 to-cyan-700 text-white font-extrabold py-4 rounded-2xl hover:-translate-y-0.5 transition-all shadow-lg shadow-teal-200">
                 إرسال الرسالة
               </button>
             </form>

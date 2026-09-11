@@ -1,0 +1,23 @@
+{
+  "name": "يُسر - منصة التعليم Oman",
+  "short_name": "يُسر",
+  "description": "منصة يُسر التعليمية المتكاملة للطلاب والمعلمين في سلطنة عمان",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0d9488",
+  "orientation": "portrait-primary",
+  "lang": "ar",
+  "dir": "rtl",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["education", "productivity"],
+  "screenshots": [],
+  "prefer_related_applications": false
+}

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { Loading, Alert, EmptyState } from '../components/common';
+import FileUpload from '../components/FileUpload';
 
 const letters = ['أ', 'ب', 'ج', 'د'];
 
@@ -29,6 +30,8 @@ export default function TeacherDashboard() {
   const [lessons, setLessons] = useState([]);
   const [exams, setExams] = useState([]);
   const [questions, setQuestions] = useState([]);
+  const [assignments, setAssignments] = useState([]);
+  const [classrooms, setClassrooms] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [grades, setGrades] = useState([]);
   const [units, setUnits] = useState([]);
@@ -56,14 +59,12 @@ export default function TeacherDashboard() {
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
     api.get('/grades').then(setGrades).catch(() => {});
-    api.get('/admin/subjects').then(setSubjects).catch(() => {});
+    api.get('/subjects').then(setSubjects).catch(() => {});
   }, [user, navigate]);
 
   const loadUnits = (sid, gid) => {
     if (!sid || !gid) return;
-    api.get(`/admin/units`).then((all) => {
-      setUnits(all.filter((u) => String(u.subject_id) === String(sid) && String(u.grade_id) === String(gid)));
-    }).catch(() => {});
+    api.get(`/units?subject_id=${sid}&grade_id=${gid}`).then(setUnits).catch(() => {});
   };
 
   const loadLessons = () => {
@@ -264,8 +265,8 @@ export default function TeacherDashboard() {
                 <div className="w-12 h-12 rounded-xl bg-teal-100 flex items-center justify-center text-xl shrink-0">📅</div>
                 <div className="min-w-0 flex-1">
                   <p className="font-bold text-sm text-slate-800 truncate">{s.title}</p>
-                  <p className="text-xs text-teal-600 font-bold">{s.subject}</p>
-                  <p className="text-xs text-slate-400 mt-0.5" dir="ltr">{s.session_date} • {s.session_time} • {s.duration} دقيقة</p>
+                  <p className="text-xs text-teal-600 font-bold">{s.subject_name}</p>
+                  <p className="text-xs text-slate-400 mt-0.5" dir="ltr">{s.session_date} • {s.session_time} • {s.duration_minutes} دقيقة</p>
                 </div>
               </div>
             ))}
@@ -273,13 +274,77 @@ export default function TeacherDashboard() {
         )}
       </div>
 
+      {/* ─── Calendar Section ─── */}
+      <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-7 mb-8">
+        <h2 className="text-xl font-extrabold text-slate-900 mb-5">📆 جدول الأحداث القادمة</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {upcomingSessions.map((s) => (
+            <div key={`sess-${s.id}`} className="flex items-center gap-3 p-3 rounded-xl bg-blue-50 border border-blue-100">
+              <span className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center text-lg shrink-0">📹</span>
+              <div className="min-w-0 flex-1">
+                <p className="font-bold text-sm text-slate-800 truncate">{s.title}</p>
+                <p className="text-xs text-blue-600">{s.subject_name} — حصة مباشرة</p>
+                <p className="text-xs text-slate-400" dir="ltr">{s.session_date} {s.session_time}</p>
+              </div>
+            </div>
+          ))}
+          {exams.filter((x) => x.open_at && new Date(x.open_at) > new Date()).slice(0, 3).map((e) => (
+            <div key={`exam-${e.id}`} className="flex items-center gap-3 p-3 rounded-xl bg-amber-50 border border-amber-100">
+              <span className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center text-lg shrink-0">📝</span>
+              <div className="min-w-0 flex-1">
+                <p className="font-bold text-sm text-slate-800 truncate">{e.title}</p>
+                <p className="text-xs text-amber-600">{e.subject_name} — اختبار</p>
+                <p className="text-xs text-slate-400" dir="ltr">{e.open_at}</p>
+              </div>
+            </div>
+          ))}
+          {upcomingSessions.length === 0 && exams.filter((x) => x.open_at && new Date(x.open_at) > new Date()).length === 0 && (
+            <div className="col-span-2 text-center py-6 text-slate-400 text-sm">لا توجد أحداث قادمة حالياً</div>
+          )}
+        </div>
+      </div>
+
+      {/* ─── Enhanced Analytics ─── */}
+      <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-7 mb-8">
+        <h2 className="text-xl font-extrabold text-slate-900 mb-5">📊 تحليلات الأداء</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-bold text-slate-700">متوسط الدرجات</span>
+              <span className="text-sm font-black text-teal-600">{avgScore}%</span>
+            </div>
+            <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-teal-400 to-emerald-500 rounded-full transition-all" style={{ width: `${avgScore}%` }} />
+            </div>
+          </div>
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-bold text-slate-700">الدروس المنشورة</span>
+              <span className="text-sm font-black text-blue-600">{lessonCount}</span>
+            </div>
+            <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-teal-400 to-cyan-500 rounded-full" style={{ width: `${Math.min(lessonCount * 10, 100)}%` }} />
+            </div>
+          </div>
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-bold text-slate-700">الطلاب المسجلين</span>
+              <span className="text-sm font-black text-teal-600">{studentCount}</span>
+            </div>
+            <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-teal-400 to-cyan-500 rounded-full" style={{ width: `${Math.min(studentCount * 5, 100)}%` }} />
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-7 mb-8">
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-xl font-extrabold text-slate-900">📦 إدارة المحتوى</h2>
         </div>
         <div className="flex flex-wrap gap-2 mb-6">
-          {[{ id: 'lessons', label: '📚 الدروس' }, { id: 'exams', label: '📝 الاختبارات' }, { id: 'questions', label: '❓ بنك الأسئلة' }].map((t) => (
-            <button key={t.id} onClick={() => openContentTab(t.id)} className={`px-5 py-2.5 rounded-2xl text-sm font-bold transition-all ${contentTab === t.id ? 'bg-teal-600 text-white shadow-lg shadow-teal-200' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+          {[{ id: 'lessons', label: '📚 الدروس' }, { id: 'exams', label: '📝 الاختبارات' }, { id: 'questions', label: '❓ بنك الأسئلة' }, { id: 'assignments', label: '📋 الواجبات' }, { id: 'classrooms', label: '🏫 الفصول' }].map((t) => (
+            <button key={t.id} onClick={() => { openContentTab(t.id); if (t.id === 'assignments') api.get('/assignments').then(setAssignments).catch(() => {}); if (t.id === 'classrooms') api.get('/classrooms').then(setClassrooms).catch(() => {}); }} className={`px-5 py-2.5 rounded-2xl text-sm font-bold transition-all ${contentTab === t.id ? 'bg-teal-600 text-white shadow-lg shadow-teal-200' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
               {t.label}
             </button>
           ))}
@@ -311,8 +376,18 @@ export default function TeacherDashboard() {
                     <option value="">بدون وحدة</option>
                     {units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
                   </select>
-                  <input value={lessonForm.video_url} onChange={(e) => setLessonForm({ ...lessonForm, video_url: e.target.value })} placeholder="رابط الفيديو" className="px-4 py-3 rounded-xl border border-slate-200 text-sm" dir="ltr" />
+                  <input value={lessonForm.video_url} onChange={(e) => setLessonForm({ ...lessonForm, video_url: e.target.value })} placeholder="رابط الفيديو (YouTube أو رابط مباشر)" className="px-4 py-3 rounded-xl border border-slate-200 text-sm" dir="ltr" />
                   <input value={lessonForm.pdf_url} onChange={(e) => setLessonForm({ ...lessonForm, pdf_url: e.target.value })} placeholder="رابط الملخص PDF" className="px-4 py-3 rounded-xl border border-slate-200 text-sm" dir="ltr" />
+                  {editingLesson && (
+                    <>
+                      <div className="md:col-span-2">
+                        <FileUpload type="video" lessonId={editingLesson.id} onUpload={(r) => setLessonForm({ ...lessonForm, video_url: r.url })} />
+                      </div>
+                      <div className="md:col-span-2">
+                        <FileUpload type="pdf" lessonId={editingLesson.id} onUpload={(r) => setLessonForm({ ...lessonForm, pdf_url: r.url })} />
+                      </div>
+                    </>
+                  )}
                   <select value={lessonForm.level} onChange={(e) => setLessonForm({ ...lessonForm, level: e.target.value })} className="px-4 py-3 rounded-xl border border-slate-200 text-sm">
                     {['مبتدئ', 'متوسط', 'متقدم'].map((l) => <option key={l} value={l}>{l}</option>)}
                   </select>
@@ -542,7 +617,7 @@ export default function TeacherDashboard() {
                       </td>
                       <td className="px-6 py-4 text-slate-500">{q.subject_name}</td>
                       <td className="px-6 py-4">
-                        <span className={`px-2.5 py-1 rounded-full text-xs font-black ${q.question_type === 'multi' ? 'bg-fuchsia-100 text-fuchsia-700' : q.question_type === 'tf' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-black ${q.question_type === 'multi' ? 'bg-cyan-100 text-cyan-700' : q.question_type === 'tf' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
                           {q.question_type === 'multi' ? 'إجابات متعددة' : q.question_type === 'tf' ? 'صح/خطأ' : 'اختيار'}
                         </span>
                       </td>
@@ -559,6 +634,24 @@ export default function TeacherDashboard() {
                 </tbody>
               </table>
             </div>
+          </div>
+        )}
+
+        {contentTab === 'assignments' && (
+          <div className="space-y-6">
+            <div className="flex justify-end">
+              <a href="/assignments" className="bg-teal-600 text-white font-extrabold px-6 py-3 rounded-xl hover:bg-teal-700 transition-colors text-sm inline-block">عرض كل الواجبات</a>
+            </div>
+            <EmptyState icon="📋" title="إدارة الواجبات" description="أنشئ وتابع واجبات طلابك من صفحة الواجبات." />
+          </div>
+        )}
+
+        {contentTab === 'classrooms' && (
+          <div className="space-y-6">
+            <div className="flex justify-end">
+              <a href="/classrooms" className="bg-teal-600 text-white font-extrabold px-6 py-3 rounded-xl hover:bg-teal-700 transition-colors text-sm inline-block">إدارة الفصول</a>
+            </div>
+            <EmptyState icon="🏫" title="الفصول الافتراضية" description="أنشئ فصلاً افتراضياً لتنظيم طلابك ودروسك." />
           </div>
         )}
       </div>
@@ -587,7 +680,7 @@ export default function TeacherDashboard() {
                   <StatCard icon="🏆" label="أعلى درجة" value={examAnalytics.stats.highestScore} color="bg-teal-100 text-teal-700" />
                   <StatCard icon="📉" label="أدنى درجة" value={examAnalytics.stats.lowestScore} color="bg-red-100 text-red-600" />
                   <StatCard icon="👥" label="طلاب فريدون" value={examAnalytics.stats.uniqueStudents} color="bg-blue-100 text-blue-700" />
-                  <StatCard icon="📝" label="إجمالي المحاولات" value={examAnalytics.stats.totalAttempts} color="bg-violet-100 text-violet-700" />
+                  <StatCard icon="📝" label="إجمالي المحاولات" value={examAnalytics.stats.totalAttempts} color="bg-teal-100 text-teal-700" />
                 </div>
 
                 <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-x-auto">

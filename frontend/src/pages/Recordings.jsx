@@ -3,11 +3,13 @@ import { Link } from 'react-router-dom';
 import { api } from '../api/client';
 import { Loading, EmptyState, Breadcrumbs } from '../components/common';
 
-function formatDate(dateStr) {
-  if (!dateStr) return '';
-  try {
-    return new Date(`${dateStr}T00:00:00`).toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' });
-  } catch { return dateStr; }
+function formatDuration(minutes) {
+  if (!minutes) return '';
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h && m) return `${h} ساعة و ${m} دقيقة`;
+  if (h) return `${h} ساعة`;
+  return `${m} دقيقة`;
 }
 
 function RecordingCard({ session, index }) {
@@ -24,18 +26,25 @@ function RecordingCard({ session, index }) {
           className="absolute inset-0 opacity-10"
           style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)', backgroundSize: '18px 18px' }}
         />
-        <button
-          type="button"
-          onClick={() => alert('التسجيل سيكون متاحاً قريباً')}
-          className="relative w-16 h-16 rounded-full bg-white/25 border-2 border-white/50 backdrop-blur flex items-center justify-center hover:scale-110 transition-transform group"
-        >
-          <svg className="w-7 h-7 mr-1 text-white group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M8 5v14l11-7z" />
-          </svg>
-        </button>
+        {session.video_url ? (
+          <Link to={`/lessons/${session.id || ''}`} className="relative w-16 h-16 rounded-full bg-white/25 border-2 border-white/50 backdrop-blur flex items-center justify-center hover:scale-110 transition-transform">
+            <svg className="w-7 h-7 mr-1 text-white" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M8 5v14l11-7z" />
+            </svg>
+          </Link>
+        ) : (
+          <div className="relative w-16 h-16 rounded-full bg-white/25 border-2 border-white/50 backdrop-blur flex items-center justify-center">
+            <span className="text-2xl">⏳</span>
+          </div>
+        )}
         <span className="absolute top-4 right-4 w-11 h-11 rounded-xl bg-white/90 flex items-center justify-center text-xl">
           {session.subject_icon || '🎥'}
         </span>
+        {session.duration_minutes > 0 && (
+          <span className="absolute bottom-4 left-4 px-2.5 py-1 rounded-lg bg-black/50 text-white text-xs font-bold backdrop-blur">
+            {formatDuration(session.duration_minutes)}
+          </span>
+        )}
       </div>
 
       <div className="p-6">
@@ -47,24 +56,13 @@ function RecordingCard({ session, index }) {
 
         <p className="text-sm text-slate-500 mb-4">👨‍🏫 {session.teacher_name}</p>
 
-        <div className="bg-cyan-50 rounded-2xl p-4 mb-5">
-          <p className="text-sm font-bold text-slate-700 flex items-center gap-2">
-            📅 {formatDate(session.session_date)}
-          </p>
-          <p className="text-sm font-bold text-slate-700 flex items-center gap-2 mt-1" dir="ltr">
-            🕒 {session.duration || 60} دقيقة
-          </p>
-        </div>
-
         {session.video_url ? (
-          <a
-            href={session.video_url}
-            target="_blank"
-            rel="noreferrer"
+          <Link
+            to={`/lessons/${session.id || ''}`}
             className="block text-center bg-gradient-to-l from-teal-600 to-cyan-600 text-white font-extrabold py-3 rounded-xl hover:-translate-y-0.5 transition-all"
           >
             شاهد التسجيل
-          </a>
+          </Link>
         ) : (
           <div className="text-center bg-slate-100 text-slate-400 font-bold py-3 rounded-xl cursor-default">
             التسجيل سيكون متاحاً قريباً
@@ -124,7 +122,7 @@ export default function Recordings() {
           </span>
           <h1 className="text-4xl md:text-5xl font-black mb-4">الحصص المسجلة</h1>
           <p className="text-cyan-200 text-lg max-w-2xl mx-auto">
-            شاهد تسجيلات الحصص المباشرة في أي وقت — لا تفوّت أي درس.
+            شاهد تسجيلات الدروس في أي وقت — تعلّم بالسرعة التي تناسبك.
           </p>
         </div>
       </div>
@@ -166,7 +164,7 @@ export default function Recordings() {
           <EmptyState
             icon="🎥"
             title="لا توجد تسجيلات متاحة"
-            description="التسجيلات ستظهر بعد انتهاء الحصص المباشرة"
+            description="ستظهر التسجيلات بعد رفع الدروس المسجلة."
           />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

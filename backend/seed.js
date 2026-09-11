@@ -2,6 +2,7 @@ import db from './db.js';
 import bcrypt from 'bcryptjs';
 
 db.exec(`
+  PRAGMA foreign_keys = OFF;
   DELETE FROM exam_results; DELETE FROM chat_history; DELETE FROM lesson_progress;
   DELETE FROM favorites; DELETE FROM points_log; DELETE FROM user_subjects;
   DELETE FROM notifications; DELETE FROM lessons; DELETE FROM questions; DELETE FROM exams;
@@ -9,8 +10,12 @@ db.exec(`
   DELETE FROM referrals; DELETE FROM users; DELETE FROM teacher_applications; DELETE FROM contact_messages;
   DELETE FROM units; DELETE FROM subjects; DELETE FROM grades;
   DELETE FROM plans; DELETE FROM offers; DELETE FROM variants;
+  DELETE FROM teacher_subjects; DELETE FROM lesson_status; DELETE FROM exam_status;
+  DELETE FROM badges; DELETE FROM user_badges; DELETE FROM levels;
+  DELETE FROM session_attendance; DELETE FROM discussions; DELETE FROM audit_log;
+  PRAGMA foreign_keys = ON;
 `);
-db.exec("DELETE FROM sqlite_sequence WHERE name IN ('exam_results','chat_history','lesson_progress','favorites','points_log','user_subjects','notifications','lessons','questions','exams','resources','live_sessions','groups','referrals','users','teacher_applications','contact_messages','units','subjects','plans','offers','variants');");
+db.exec("DELETE FROM sqlite_sequence WHERE name IN ('exam_results','chat_history','lesson_progress','favorites','points_log','user_subjects','notifications','lessons','questions','exams','resources','live_sessions','groups','referrals','users','teacher_applications','contact_messages','units','subjects','plans','offers','variants','teacher_subjects','lesson_status','exam_status','badges','user_badges','levels','session_attendance','discussions','audit_log');");
 
 // ---------- الصفوف (٨ - ١٢) ----------
 const grades = [
@@ -161,12 +166,32 @@ for (const l of lessons) {
   lessonIds[`${l.sub}:${l.grade}:${l.unit}`].push(db.prepare('SELECT last_insert_rowid() id').get().id);
 }
 
-// روابط فيديو تجريبية لبعض الدروس (لاختبار المشغل — تُستبدل لاحقاً بفيديوهات حقيقية)
-const videoStmt = db.prepare('UPDATE lessons SET video_url = ? WHERE title = ?');
-videoStmt.run('https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4', 'المتغيرات والعبارات الجبرية');
-videoStmt.run('https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4', 'الاشتقاق: النهايات وقواعد الاشتقاق');
-videoStmt.run('https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4', 'الحركة والقوى');
-videoStmt.run('https://www.youtube.com/watch?v=LXb3EKWsInQ', 'Tenses: Present & Past');
+// لا توجد فيديوهات تجريبية — الفيديوهات تُرفع من المعلمين
+
+// ---------- بيانات المستويات ----------
+const levelData = [
+  [1, 'مبتدئ', 0, '🌱'],
+  [2, 'متعلم', 100, '📚'],
+  [3, 'متوسط', 300, '⭐'],
+  [4, 'متقدم', 600, '🏆'],
+  [5, 'خبير', 1000, '👑'],
+  [6, 'محترف', 2000, '💎'],
+];
+const levelInsert = db.prepare('INSERT OR IGNORE INTO levels (level, name, points_required, icon) VALUES (?, ?, ?, ?)');
+for (const l of levelData) levelInsert.run(...l);
+
+// ---------- بيانات الشارات ----------
+const badgeData = [
+  ['أول درس', 'أكمل أول درس', '🎬', 0],
+  ['محلل', 'حل أول اختبار', '📝', 0],
+  ['متفوق', 'حصل على 90% في اختبار', '🌟', 0],
+  ['ملتزم', 'أكمل 10 دروس', '📚', 0],
+  ['خبير', 'أكمل 50 درس', '🏅', 0],
+  ['نجم', 'جمع 500 نقطة', '⭐', 500],
+  ['بطل', 'جمع 1000 نقطة', '🏆', 1000],
+];
+const badgeInsert = db.prepare('INSERT OR IGNORE INTO badges (name, description, icon, points_required) VALUES (?, ?, ?, ?)');
+for (const b of badgeData) badgeInsert.run(...b);
 
 // ---------- بنك الأسئلة ----------
 const qs = [
@@ -343,59 +368,51 @@ notifStmt.run(null, '📖 مراجعة جديدة', 'تم رفع مراجعة ا
 notifStmt.run(null, '🎁 عرض يُسر', 'اشترك الآن واحصل على هديتك! أول 10 مشتركين يحصلون على هدية مجانية.', 'offer');
 
 // ---------- المستخدمون ----------
+// حسابات основية لل tests (لا تُعرض في الواجهة)
 const hash = bcrypt.hashSync('password123', 10);
-const studentRes = db.prepare("INSERT INTO users (name, email, phone, password, role, grade, points, referral_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
-  .run('أحمد البلوشي', 'student@yusr.edu.om', '91234567', hash, 'student', 12, 240, 'YUSR-AHMED1');
-const studentId = studentRes.lastInsertRowid;
-db.prepare("INSERT INTO users (name, email, phone, password, role) VALUES (?, ?, ?, ?, ?)")
+db.prepare("INSERT OR IGNORE INTO users (name, email, phone, password, role, grade, points) VALUES (?, ?, ?, ?, ?, ?, ?)")
+  .run('أحمد البلوشي', 'student@yusr.edu.om', '91234567', hash, 'student', 12, 240);
+db.prepare("INSERT OR IGNORE INTO users (name, email, phone, password, role) VALUES (?, ?, ?, ?, ?)")
   .run('إدارة يسر', 'admin@yusr.edu.om', '90000000', hash, 'admin');
-db.prepare("INSERT INTO users (name, email, phone, password, role) VALUES (?, ?, ?, ?, ?)")
+db.prepare("INSERT OR IGNORE INTO users (name, email, phone, password, role) VALUES (?, ?, ?, ?, ?)")
   .run('معلم الرياضيات', 'teacher@yusr.edu.om', '91111111', hash, 'teacher');
-// طالب اشترك باستخدام كود السفير (للتجربة)
-const referredRes = db.prepare("INSERT INTO users (name, email, phone, password, role, grade, referred_by) VALUES (?, ?, ?, ?, ?, ?, ?)")
-  .run('سعيد الكندي', 'saeed@yusr.edu.om', '92345678', hash, 'student', 11, 'YUSR-AHMED1');
-const referredId = referredRes.lastInsertRowid;
+const studentId = db.prepare("SELECT id FROM users WHERE email = 'student@yusr.edu.om'").get()?.id;
 
-// إحالة تجريبية لسفير (أحمد) — 3 مواد في قسم ١١-١٢ (3 × 20 = 60)
-db.prepare('INSERT INTO referrals (ambassador_id, referred_user_id, amount, reward) VALUES (?, ?, ?, ?)')
-  .run(studentId, referredId, 60, 6);
+// ربط المعلم بالمواد
+const teacherId = db.prepare("SELECT id FROM users WHERE email = 'teacher@yusr.edu.om'").get()?.id;
+if (teacherId) {
+  const teacherSubjectInsert = db.prepare('INSERT OR IGNORE INTO teacher_subjects (teacher_id, subject_id) VALUES (?, ?)');
+  teacherSubjectInsert.run(teacherId, subjectIds.math);
+  teacherSubjectInsert.run(teacherId, subjectIds.physics);
+  teacherSubjectInsert.run(teacherId, subjectIds.chemistry);
+}
 
 // اشتراك تجريبي للمادة الرياضيات
-const exp = new Date(); exp.setMonth(exp.getMonth() + 12);
-db.prepare('INSERT INTO user_subjects (user_id, subject_id, plan, expires_at) VALUES (?, ?, ?, ?)')
-  .run(studentId, subjectIds.math, 'single', exp.toISOString().slice(0, 10));
+if (studentId) {
+  const exp = new Date(); exp.setMonth(exp.getMonth() + 12);
+  db.prepare('INSERT OR IGNORE INTO user_subjects (user_id, subject_id, plan, expires_at) VALUES (?, ?, ?, ?)')
+    .run(studentId, subjectIds.math, 'single', exp.toISOString().slice(0, 10));
 
-// نتائج اختبارات تجريبية
-const results = [
-  { exam: 'math:10', score: 90 },
-  { exam: 'physics:11', score: 80 },
-  { exam: 'chemistry:10', score: 95 },
-];
-const examIds = {};
-for (const e of db.prepare('SELECT id, subject_id, grade_id FROM exams').all()) {
-  const subSlug = Object.keys(subjectIds).find((k) => subjectIds[k] === e.subject_id);
-  examIds[`${subSlug}:${e.grade_id}`] = e.id;
+  // نتائج اختبارات تجريبية
+  const examIds = {};
+  for (const e of db.prepare('SELECT id, subject_id, grade_id FROM exams').all()) {
+    const subSlug = Object.keys(subjectIds).find((k) => subjectIds[k] === e.subject_id);
+    examIds[`${subSlug}:${e.grade_id}`] = e.id;
+  }
+  const resIns = db.prepare('INSERT OR IGNORE INTO exam_results (user_id, exam_id, score, total) VALUES (?, ?, ?, ?)');
+  [{ exam: 'math:10', score: 90 }, { exam: 'physics:11', score: 80 }, { exam: 'chemistry:10', score: 95 }].forEach((r) => {
+    const eid = examIds[r.exam];
+    if (eid) resIns.run(studentId, eid, r.score, 20);
+  });
+
+  // إنجاز بعض الدروس
+  const progStmt = db.prepare('INSERT OR IGNORE INTO lesson_progress (user_id, lesson_id) VALUES (?, ?)');
+  db.prepare('SELECT id FROM lessons WHERE grade_id = 12 OR grade_id = 11').all().slice(0, 6).forEach((l) => progStmt.run(studentId, l.id));
+
+  // نقاط تحفيز
+  const pointStmt = db.prepare('INSERT OR IGNORE INTO points_log (user_id, points, reason) VALUES (?, ?, ?)');
+  [['مشاهدة درس الاشتقاق', 10], ['إكمال اختبار المعادلات', 20], ['درجة عالية في الرياضيات', 30]].forEach(([reason, p]) => pointStmt.run(studentId, p, reason));
 }
-const resIns = db.prepare('INSERT INTO exam_results (user_id, exam_id, score, total) VALUES (?, ?, ?, ?)');
-for (const r of results) {
-  const eid = examIds[r.exam];
-  if (eid) resIns.run(studentId, eid, r.score, 20);
-}
-
-// إنجاز بعض الدروس
-const progStmt = db.prepare('INSERT INTO lesson_progress (user_id, lesson_id) VALUES (?, ?)');
-const allLessons = db.prepare('SELECT id FROM lessons WHERE grade_id = 12 OR grade_id = 11').all();
-allLessons.slice(0, 6).forEach((l) => progStmt.run(studentId, l.id));
-
-// نقاط تحفيز
-const pointStmt = db.prepare('INSERT INTO points_log (user_id, points, reason) VALUES (?, ?, ?)');
-[['مشاهدة درس الاشتقاق', 10], ['إكمال اختبار المعادلات', 20], ['درجة عالية في الرياضيات', 30], ['مشاهدة حصة مسجلة', 10], ['حل بنك أسئلة', 15]].forEach(([reason, p]) => pointStmt.run(studentId, p, reason));
-
-// رسائل تواصل وطلبات معلمين تجريبية
-db.prepare('INSERT INTO contact_messages (name, phone, email, subject, message) VALUES (?, ?, ?, ?, ?)')
-  .run('سعيد المقبالي', '92345678', 'saeed@test.com', 'استفسار عن الاشتراك', 'كيف أستطيع الاشتراك في مادتين؟');
-db.prepare('INSERT INTO teacher_applications (name, email, phone, subject, years_experience, message) VALUES (?, ?, ?, ?, ?, ?)')
-  .run('أ. ناصر البوسعيدي', 'nasser@test.com', '93456789', 'الفيزياء', 10, 'معلم فيزياء بخبرة عشر سنوات أرغب بالانضمام.');
 
 // ---------- خطط الاشتراك (أسعار ديناميكية تُدار من لوحة الإدارة) ----------
 const planStmt = db.prepare('INSERT OR REPLACE INTO plans (section, key, name, subjects, price, original_price, discount_pct) VALUES (?, ?, ?, ?, ?, ?, ?)');
@@ -424,7 +441,7 @@ offerStmt.run('ترقية الجميع لمسابقة شهرية', 'أعلى ن�
 // ---------- أنواع المواد (Variants) ----------
 // (تمت التهيئة أعلاه مع المواد مباشرة)
 
-console.log('✅ تم تهيئة قاعدة البيانات بنجاح (وفق المواصفات الجديدة)');
+console.log('✅ تم تهيئة قاعدة البيانات بنجاح');
 console.log('🏫 الصفوف:', db.prepare('SELECT COUNT(*) c FROM grades').get().c, '(٨-١٢)');
 console.log('📚 المواد:', db.prepare('SELECT COUNT(*) c FROM subjects').get().c);
 console.log('📦 الوحدات:', db.prepare('SELECT COUNT(*) c FROM units').get().c);
@@ -435,5 +452,3 @@ console.log('📁 مكتبة الملفات:', db.prepare('SELECT COUNT(*) c FRO
 console.log('🔴 الحصص المباشرة:', db.prepare('SELECT COUNT(*) c FROM live_sessions').get().c);
 console.log('👥 الجروبات:', db.prepare('SELECT COUNT(*) c FROM groups').get().c);
 console.log('🔔 الإشعارات:', db.prepare('SELECT COUNT(*) c FROM notifications').get().c);
-console.log('🔑 حساب تجريبي: student@yusr.edu.om / password123');
-console.log('🔑 حساب إدارة: admin@yusr.edu.om / password123');

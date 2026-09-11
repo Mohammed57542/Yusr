@@ -5,18 +5,18 @@ import { requireAuth } from '../middleware/auth.js';
 const router = Router();
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || null;
 
-function saveChat(userId, role, content) {
-  db.prepare('INSERT INTO chat_history (user_id, role, content) VALUES (?, ?, ?)').run(userId || null, role, content);
+async function saveChat(userId, role, content) {
+  await db.prepare('INSERT INTO chat_history (user_id, role, content) VALUES (?, ?, ?)').run(userId || null, role, content);
 }
 
-function pricesText() {
+async function pricesText() {
   try {
     const sections = ['junior', 'senior'];
     const labels = { junior: 'قسم ٨-١٠', senior: 'قسم ١١-١٢' };
     const planNames = { single: 'مادة واحدة', triple: '3 مواد', all: 'جميع المواد' };
     let out = 'اشتراكات منصة يسر السنوية حسب قسمك: 💳\n\n';
     for (const s of sections) {
-      const rows = db.prepare('SELECT * FROM plans WHERE section = ? AND active = 1 ORDER BY id').all(s);
+      const rows = await db.prepare('SELECT * FROM plans WHERE section = ? AND active = 1 ORDER BY id').all(s);
       out += `${labels[s]}:\n`;
       if (!rows.length) {
         out += '📘 مادة واحدة (15 ر.ع) • 📚 3 مواد (38 ر.ع) • 🎓 جميع المواد (79 ر.ع)\n';
@@ -33,13 +33,13 @@ function pricesText() {
   }
 }
 
-function localAssistant(message) {
+async function localAssistant(message) {
   const m = message.toLowerCase();
   const intro = 'أنا مساعد يسر الذكي 💡\n';
   const canHelp = '\n\nأقدر أساعدك في:\n📚 شرح الدروس\n❓ توليد أسئلة تدريبية\n📝 تلخيص المواضيع\n🎯 خطة مذاكرة\n💡 نصائح للتفوق';
 
   if (m.includes('سؤال') || m.includes('اسألني') || m.includes('اختبرني') || m.includes('تمرين')) {
-    const q = db.prepare('SELECT * FROM questions ORDER BY RANDOM() LIMIT 1').get();
+    const q = await db.prepare('SELECT * FROM questions ORDER BY RANDOM() LIMIT 1').get();
     if (q) {
       const opts = JSON.parse(q.options);
       const lines = opts.map((o, i) => `${['أ', 'ب', 'ج', 'د'][i]}) ${o}`).join('\n');
@@ -72,7 +72,7 @@ function localAssistant(message) {
   }
 
   if (m.includes('اشتراك') || m.includes('سعر') || m.includes('باقة')) {
-    return intro + pricesText();
+    return intro + await pricesText();
   }
 
   return intro + 'فهمت سؤالك، دعني أساعدك 💪\nسأجيب بناءً على ما هو متاح في قاعدة البيانات التعليمية.\n' + canHelp;
@@ -95,23 +95,23 @@ async function aiResponse(message, history) {
       if (data.choices?.[0]?.message?.content) return data.choices[0].message.content;
     } catch { /* fallback to local */ }
   }
-  return localAssistant(message);
+  return await localAssistant(message);
 }
 
 router.post('/chat', requireAuth, async (req, res) => {
   const { message } = req.body;
   if (!message || !message.trim()) return res.status(400).json({ error: 'يرجى كتابة رسالة' });
 
-  saveChat(req.user.id, 'user', message);
-  const history = db.prepare('SELECT role, content FROM chat_history WHERE user_id = ? ORDER BY id DESC LIMIT 20').all(req.user.id).reverse();
+  await saveChat(req.user.id, 'user', message);
+  const history = (await db.prepare('SELECT role, content FROM chat_history WHERE user_id = ? ORDER BY id DESC LIMIT 20').all(req.user.id)).reverse();
 
   const reply = await aiResponse(message, history);
-  saveChat(req.user.id, 'assistant', reply);
+  await saveChat(req.user.id, 'assistant', reply);
   res.json({ reply });
 });
 
-router.get('/history', requireAuth, (req, res) => {
-  const history = db.prepare('SELECT role, content, created_at FROM chat_history WHERE user_id = ? ORDER BY id DESC LIMIT 50').all(req.user.id).reverse();
+router.get('/history', requireAuth, async (req, res) => {
+  const history = (await db.prepare('SELECT role, content, created_at FROM chat_history WHERE user_id = ? ORDER BY id DESC LIMIT 50').all(req.user.id)).reverse();
   res.json(history);
 });
 

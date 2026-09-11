@@ -14,20 +14,23 @@ export function AuthProvider({ children }) {
       .then(setUser)
       .catch(() => {
         localStorage.removeItem('yusr_token');
+        localStorage.removeItem('yusr_refresh');
         setToken(null);
         setUser(null);
       })
       .finally(() => setLoading(false));
   }, [token]);
 
-  const login = (newToken, newUser) => {
+  const login = (newToken, newUser, newRefreshToken) => {
     localStorage.setItem('yusr_token', newToken);
+    if (newRefreshToken) localStorage.setItem('yusr_refresh', newRefreshToken);
     setToken(newToken);
     setUser(newUser);
   };
 
   const logout = () => {
     localStorage.removeItem('yusr_token');
+    localStorage.removeItem('yusr_refresh');
     setToken(null);
     setUser(null);
   };

@@ -63,7 +63,7 @@ export default function ExamTake() {
             <div className="relative w-36 h-36">
               <svg className="w-36 h-36 -rotate-90" viewBox="0 0 120 120">
                 <circle cx="60" cy="60" r="52" fill="none" stroke="#f1f5f9" strokeWidth="12" />
-                <circle cx="60" cy="60" r="52" fill="none" stroke={pct >= 60 ? '#7c3aed' : '#ef4444'} strokeWidth="12" strokeLinecap="round" strokeDasharray={`${(pct / 100) * 326.7} 326.7`} />
+                <circle cx="60" cy="60" r="52" fill="none" stroke={pct >= 60 ? '#0d9488' : '#ef4444'} strokeWidth="12" strokeLinecap="round" strokeDasharray={`${(pct / 100) * 326.7} 326.7`} />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <span className="text-3xl font-black text-slate-900">{pct}%</span>
@@ -77,7 +77,7 @@ export default function ExamTake() {
             </div>
           </div>
           <div className="flex flex-wrap justify-center gap-3">
-            <Link to="/exams" className="bg-violet-600 text-white font-bold px-6 py-3 rounded-xl hover:bg-violet-700 transition-colors">المزيد من الاختبارات</Link>
+            <Link to="/exams" className="bg-teal-600 text-white font-bold px-6 py-3 rounded-xl hover:bg-teal-700 transition-colors">المزيد من الاختبارات</Link>
             <button onClick={() => window.location.reload()} className="bg-slate-100 text-slate-700 font-bold px-6 py-3 rounded-xl hover:bg-slate-200 transition-colors">إعادة المحاولة</button>
           </div>
         </div>
@@ -146,7 +146,7 @@ export default function ExamTake() {
           className="h-full rounded-full transition-all duration-300"
           style={{
             width: `${(answered / data.questions.length) * 100}%`,
-            background: answered === data.questions.length ? '#10b981' : '#7c3aed'
+            background: answered === data.questions.length ? '#10b981' : '#0d9488'
           }}
         />
       </div>
@@ -155,11 +155,11 @@ export default function ExamTake() {
         <div className="lg:col-span-3">
           <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8">
             <div className="flex items-center justify-between mb-6">
-              <span className="bg-violet-100 text-violet-700 font-bold text-sm px-4 py-1.5 rounded-full">سؤال {current + 1} من {data.questions.length}</span>
+              <span className="bg-teal-100 text-teal-700 font-bold text-sm px-4 py-1.5 rounded-full">سؤال {current + 1} من {data.questions.length}</span>
               <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">{q.difficulty}</span>
             </div>
             <h2 className="text-xl md:text-2xl font-extrabold text-slate-900 mb-7 leading-9">{q.question}</h2>
-            {q.question_type === 'multi' && <p className="text-xs font-bold text-violet-600 bg-violet-50 border border-violet-100 rounded-xl px-3 py-2 mb-4">☑️ اختر كل الإجابات الصحيحة</p>}
+            {q.question_type === 'multi' && <p className="text-xs font-bold text-teal-600 bg-teal-50 border border-teal-100 rounded-xl px-3 py-2 mb-4">☑️ اختر كل الإجابات الصحيحة</p>}
             <div className="space-y-3">
               {q.options.map((opt, i) => {
                 const isMulti = q.question_type === 'multi';
@@ -177,14 +177,14 @@ export default function ExamTake() {
                     key={i}
                     onClick={toggle}
                     className={`w-full flex items-center gap-4 p-4 rounded-2xl border-2 text-right transition-all ${
-                      selected ? 'border-violet-600 bg-violet-50' : 'border-slate-100 bg-white hover:border-violet-300 hover:bg-violet-50/50'
+                      selected ? 'border-teal-600 bg-teal-50' : 'border-slate-100 bg-white hover:border-teal-300 hover:bg-teal-50/50'
                     }`}
                   >
-                    <span className={`w-9 h-9 rounded-xl flex items-center justify-center font-black shrink-0 transition-colors ${selected ? 'bg-violet-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                    <span className={`w-9 h-9 rounded-xl flex items-center justify-center font-black shrink-0 transition-colors ${selected ? 'bg-teal-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
                       {isMulti ? (selected ? '✓' : letters[i]) : letters[i]}
                     </span>
-                    <span className={`font-medium ${selected ? 'text-violet-900' : 'text-slate-700'}`}>{opt}</span>
-                    {selected && <span className="mr-auto text-violet-600 font-black">✓</span>}
+                    <span className={`font-medium ${selected ? 'text-teal-900' : 'text-slate-700'}`}>{opt}</span>
+                    {selected && <span className="mr-auto text-teal-600 font-black">✓</span>}
                   </button>
                 );
               })}
@@ -196,7 +196,7 @@ export default function ExamTake() {
               → السابق
             </button>
             {current < data.questions.length - 1 ? (
-              <button onClick={() => setCurrent((c) => c + 1)} className="px-8 py-3 rounded-xl bg-violet-600 text-white font-bold hover:bg-violet-700 transition-colors">
+              <button onClick={() => setCurrent((c) => c + 1)} className="px-8 py-3 rounded-xl bg-teal-600 text-white font-bold hover:bg-teal-700 transition-colors">
                 التالي ←
               </button>
             ) : (
@@ -215,7 +215,7 @@ export default function ExamTake() {
                 key={item.id}
                 onClick={() => setCurrent(i)}
                 className={`w-10 h-10 rounded-xl text-sm font-bold transition-colors ${
-                  answers[item.id] !== undefined ? 'bg-violet-600 text-white' : current === i ? 'bg-violet-100 text-violet-700 border-2 border-violet-400' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                  answers[item.id] !== undefined ? 'bg-teal-600 text-white' : current === i ? 'bg-teal-100 text-teal-700 border-2 border-teal-400' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
                 }`}
               >
                 {i + 1}

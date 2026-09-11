@@ -43,7 +43,7 @@ export default function Reviews() {
 
   return (
     <div>
-      <div className="bg-gradient-to-br from-rose-600 via-pink-700 to-violet-800 text-white">
+      <div className="bg-gradient-to-br from-rose-600 via-pink-700 to-teal-800 text-white">
         <div className="max-w-7xl mx-auto px-4 py-16 text-center">
           <span className="inline-block px-4 py-1.5 rounded-full bg-white/10 border border-white/20 text-sm font-bold mb-5">المراجعات</span>
           <h1 className="text-4xl md:text-5xl font-black mb-4">راجع بذكاء قبل الاختبار</h1>
@@ -96,9 +96,9 @@ export default function Reviews() {
           </div>
         )}
 
-        <div className="mt-16 bg-gradient-to-br from-violet-700 via-purple-800 to-indigo-900 text-white rounded-[2rem] p-10 md:p-14 text-center">
+        <div className="mt-16 bg-gradient-to-br from-teal-700 via-cyan-800 to-night text-white rounded-[2rem] p-10 md:p-14 text-center">
           <h2 className="text-3xl md:text-4xl font-black mb-4">المراجعات المباشرة في الحصص</h2>
-          <p className="text-violet-200 max-w-2xl mx-auto mb-8 leading-7">لا تفوّت الحصص المباشرة لمراجعة أهم المواضيع قبل الاختبارات، واطرح أسئلتك مباشرة.</p>
+          <p className="text-teal-200 max-w-2xl mx-auto mb-8 leading-7">لا تفوّت الحصص المباشرة لمراجعة أهم المواضيع قبل الاختبارات، واطرح أسئلتك مباشرة.</p>
           <div className="flex flex-wrap justify-center gap-4">
             <Link to="/live-sessions" className="bg-amber-400 text-slate-900 font-extrabold px-8 py-4 rounded-2xl hover:-translate-y-0.5 transition-all">جدول الحصص المباشرة</Link>
             <Link to="/exams" className="bg-white/10 border border-white/25 font-bold px-8 py-4 rounded-2xl hover:bg-white/20 transition-all">اختبر نفسك الآن</Link>

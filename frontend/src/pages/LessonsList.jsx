@@ -25,14 +25,14 @@ export default function LessonsList() {
   return (
     <div className="max-w-7xl mx-auto px-4 py-10">
       <div className="mb-8">
-        <Link to="/subjects" className="text-violet-600 text-sm hover:text-violet-800 mb-2 inline-block">→ المواد</Link>
+        <Link to="/subjects" className="text-teal-600 text-sm hover:text-teal-800 mb-2 inline-block">→ المواد</Link>
         <h1 className="text-3xl font-black text-slate-900">
           {teacher ? `دروس ${teacher}` : subject ? 'دروس المادة' : 'جميع الدروس'}
         </h1>
         <p className="text-slate-500 mt-1">تصفح الدروس المصورة وابدأ التعلم فوراً.</p>
       </div>
 
-      <select value={subject} onChange={(e) => { const next = new URLSearchParams(params); if (e.target.value) next.set('subject', e.target.value); else next.delete('subject'); setParams(next, { replace: true }); }} className="mb-8 px-4 py-3 rounded-2xl border border-slate-200 bg-white text-sm font-bold focus:outline-none focus:ring-2 focus:ring-violet-400">
+      <select value={subject} onChange={(e) => { const next = new URLSearchParams(params); if (e.target.value) next.set('subject', e.target.value); else next.delete('subject'); setParams(next, { replace: true }); }} className="mb-8 px-4 py-3 rounded-2xl border border-slate-200 bg-white text-sm font-bold focus:outline-none focus:ring-2 focus:ring-teal-400">
         <option value="">جميع المواد</option>
         {subjects.map((s) => <option key={s.id} value={s.id}>{s.icon} {s.name}</option>)}
       </select>
@@ -61,7 +61,7 @@ export default function LessonsList() {
                   <Badge>{l.subject_name}</Badge>
                   <span className="text-slate-400">{l.grade_name}</span>
                 </div>
-                <h3 className="font-extrabold text-slate-900 leading-7 mb-1 group-hover:text-violet-700 transition-colors">{l.title}</h3>
+                <h3 className="font-extrabold text-slate-900 leading-7 mb-1 group-hover:text-teal-700 transition-colors">{l.title}</h3>
                 {l.teacher_name && <p className="text-xs text-slate-400 mb-2">👨‍🏫 {l.teacher_name}</p>}
                 <div className="flex items-center justify-between text-xs text-slate-400">
                   <span>👁️ {l.views.toLocaleString('ar-EG')} مشاهدة</span>

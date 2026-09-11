@@ -50,12 +50,12 @@ export default function Exams() {
 
   return (
     <div>
-      <div className="bg-gradient-to-br from-violet-700 via-purple-800 to-indigo-900 text-white">
+      <div className="bg-gradient-to-br from-teal-700 via-cyan-800 to-night text-white">
         <div className="max-w-7xl mx-auto px-4 py-16 text-center">
           <Breadcrumbs items={[{ label: 'الاختبارات' }]} />
           <span className="inline-block px-4 py-1.5 rounded-full bg-white/10 border border-white/20 text-sm font-bold mb-5">الاختبارات</span>
           <h1 className="text-4xl md:text-5xl font-black mb-4">اختبر نفسك وقيّم مستواك</h1>
-          <p className="text-violet-200 text-lg max-w-2xl mx-auto">اختبارات دروس ووحدات ونهائية مع تصحيح فوري ونتيجة مباشرة وتحليل لأدائك.</p>
+          <p className="text-teal-200 text-lg max-w-2xl mx-auto">اختبارات دروس ووحدات ونهائية مع تصحيح فوري ونتيجة مباشرة وتحليل لأدائك.</p>
           <Link to="/question-bank" className="inline-block mt-6 bg-amber-400 text-slate-900 font-extrabold px-8 py-3.5 rounded-2xl hover:-translate-y-0.5 transition-all shadow-xl shadow-amber-500/20">
             📝 أو تدرب في بنك الأسئلة
           </Link>
@@ -70,23 +70,23 @@ export default function Exams() {
               placeholder="🔍 ابحث في الاختبارات..."
               value={search}
               onChange={(e) => updateParam('search', e.target.value)}
-              className="w-full px-5 py-3.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-violet-400 text-sm font-bold"
+              className="w-full px-5 py-3.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-400 text-sm font-bold"
             />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <select value={grade} onChange={(e) => updateParam('grade', e.target.value)} className="px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-violet-400">
+            <select value={grade} onChange={(e) => updateParam('grade', e.target.value)} className="px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-teal-400">
               <option value="">كل الصفوف</option>
               {grades.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
             </select>
-            <select value={subject} onChange={(e) => updateParam('subject', e.target.value)} className="px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-violet-400">
+            <select value={subject} onChange={(e) => updateParam('subject', e.target.value)} className="px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-teal-400">
               <option value="">كل المواد</option>
               {subjects.map((s) => <option key={s.id} value={s.id}>{s.icon} {s.name}</option>)}
             </select>
-            <select value={type} onChange={(e) => updateParam('type', e.target.value)} className="px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-violet-400">
+            <select value={type} onChange={(e) => updateParam('type', e.target.value)} className="px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-teal-400">
               <option value="">كل الأنواع</option>
               {TYPES.map((t) => <option key={t} value={t}>{t === 'نهائي' ? '🏁 نهائي' : t === 'وحدة' ? '📦 وحدة' : '📘 درس'}</option>)}
             </select>
-            <select value={unit} onChange={(e) => updateParam('unit', e.target.value)} className="px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-violet-400">
+            <select value={unit} onChange={(e) => updateParam('unit', e.target.value)} className="px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-teal-400">
               <option value="">كل الوحدات</option>
               {units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
             </select>
@@ -150,7 +150,7 @@ export default function Exams() {
                   <h3 className="font-extrabold text-slate-900 leading-6">{e.title}</h3>
                 </div>
                 <div className="p-6">
-                  {e.unit_name && <p className="text-xs text-violet-700 font-bold mb-3">الوحدة: {e.unit_name}</p>}
+                  {e.unit_name && <p className="text-xs text-teal-700 font-bold mb-3">الوحدة: {e.unit_name}</p>}
                   <p className="text-sm text-slate-500 leading-6 line-clamp-2 mb-4">{e.description}</p>
                   <div className="flex items-center justify-between text-xs text-slate-400 mb-5">
                     <span>❓ {e.question_count} سؤال</span>
@@ -160,7 +160,7 @@ export default function Exams() {
                   {e.locked ? (
                     <Link to="/pricing" className="block text-center bg-slate-100 text-slate-500 font-extrabold py-3 rounded-2xl hover:bg-slate-200 transition-colors">🔒 للمشتركين في {e.subject_name}</Link>
                   ) : (
-                    <Link to={`/exams/${e.id}/take`} className="block text-center bg-violet-600 text-white font-extrabold py-3 rounded-2xl hover:bg-violet-700 transition-colors">
+                    <Link to={`/exams/${e.id}/take`} className="block text-center bg-teal-600 text-white font-extrabold py-3 rounded-2xl hover:bg-teal-700 transition-colors">
                       ابدأ الاختبار
                     </Link>
                   )}

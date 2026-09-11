@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../api/client';
 import { SectionHeader, Alert, Input, EmptyState } from '../components/common';
 
-const COLORS = ['bg-blue-500', 'bg-emerald-500', 'bg-amber-500', 'bg-red-500', 'bg-purple-500', 'bg-pink-500', 'bg-cyan-500', 'bg-lime-500', 'bg-orange-500', 'bg-teal-500'];
+const COLORS = ['bg-blue-500', 'bg-emerald-500', 'bg-amber-500', 'bg-red-500', 'bg-teal-500', 'bg-cyan-500', 'bg-cyan-500', 'bg-lime-500', 'bg-orange-500', 'bg-teal-600'];
 
 const initialsOf = (name) => {
   const parts = name.replace('أ. ', '').split(' ');
@@ -40,11 +40,11 @@ export default function Teachers() {
 
   return (
     <div>
-      <div className="bg-gradient-to-br from-violet-700 via-purple-800 to-indigo-900 text-white">
+      <div className="bg-gradient-to-br from-teal-700 via-cyan-800 to-night text-white">
         <div className="max-w-7xl mx-auto px-4 py-16 text-center">
           <span className="inline-block px-4 py-1.5 rounded-full bg-white/10 border border-white/20 text-sm font-bold mb-5">المعلمون</span>
           <h1 className="text-4xl md:text-5xl font-black mb-4">معلمون متميزون</h1>
-          <p className="text-violet-200 text-lg max-w-2xl mx-auto">معلمون يدرسون على المنصة ويقدّمون محتوى تعليمي متميزاً لطلاب المنهج العُماني.</p>
+          <p className="text-teal-200 text-lg max-w-2xl mx-auto">معلمون يدرسون على المنصة ويقدّمون محتوى تعليمي متميزاً لطلاب المنهج العُماني.</p>
         </div>
       </div>
 
@@ -52,11 +52,11 @@ export default function Teachers() {
         {teachers.length > 0 && (
           <>
             <div className="flex gap-2 mb-8 overflow-x-auto pb-2">
-              <button onClick={() => setFilter('all')} className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-colors ${filter === 'all' ? 'bg-violet-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:border-violet-300'}`}>
+              <button onClick={() => setFilter('all')} className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-colors ${filter === 'all' ? 'bg-teal-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:border-teal-300'}`}>
                 الكل ({teachers.length})
               </button>
               {subjectsList.map((s) => (
-                <button key={s} onClick={() => setFilter(s)} className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-colors ${filter === s ? 'bg-violet-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:border-violet-300'}`}>
+                <button key={s} onClick={() => setFilter(s)} className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-colors ${filter === s ? 'bg-teal-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:border-teal-300'}`}>
                   {s}
                 </button>
               ))}
@@ -69,11 +69,11 @@ export default function Teachers() {
                     <div className={`w-16 h-16 rounded-3xl ${COLORS[i % COLORS.length]} flex items-center justify-center text-xl font-black text-white shadow-lg shrink-0`}>{t.initials || initialsOf(t.name)}</div>
                     <div>
                       <h3 className="text-lg font-extrabold text-slate-900">{t.name}</h3>
-                      <p className="text-violet-600 font-bold text-sm">{t.subjects || t.subject}</p>
+                      <p className="text-teal-600 font-bold text-sm">{t.subjects || t.subject}</p>
                       <p className="text-xs text-slate-400">📚 {t.lessons_count || 0} درس في المنصة</p>
                     </div>
                   </div>
-                  <Link to={`/lessons?teacher=${encodeURIComponent(t.name)}`} className="block text-center bg-violet-50 text-violet-700 font-extrabold py-3 rounded-2xl hover:bg-violet-100 transition-colors text-sm">
+                  <Link to={`/lessons?teacher=${encodeURIComponent(t.name)}`} className="block text-center bg-teal-50 text-teal-700 font-extrabold py-3 rounded-2xl hover:bg-teal-100 transition-colors text-sm">
                     📚 استكشف محتوى المعلم
                   </Link>
                 </div>
@@ -100,7 +100,7 @@ export default function Teachers() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
                   <label className="block text-sm font-bold text-slate-700 mb-1.5">المادة</label>
-                  <select value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-violet-400" required>
+                  <select value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-teal-400" required>
                     <option value="">اختر المادة</option>
                     <option>الرياضيات</option>
                     <option>الرياضيات المتقدمة</option>
@@ -117,9 +117,9 @@ export default function Teachers() {
               </div>
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-1.5">رسالة قصيرة عنك</label>
-                <textarea value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} rows="4" placeholder="أخبرنا عن خبرتك وإنجازاتك..." className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-violet-400 resize-none" />
+                <textarea value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} rows="4" placeholder="أخبرنا عن خبرتك وإنجازاتك..." className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-400 resize-none" />
               </div>
-              <button type="submit" className="w-full bg-gradient-to-l from-violet-600 to-purple-700 text-white font-extrabold py-4 rounded-2xl hover:-translate-y-0.5 transition-all shadow-lg shadow-violet-200">
+              <button type="submit" className="w-full bg-gradient-to-l from-teal-600 to-cyan-700 text-white font-extrabold py-4 rounded-2xl hover:-translate-y-0.5 transition-all shadow-lg shadow-teal-200">
                 إرسال الطلب
               </button>
             </form>

@@ -40,16 +40,16 @@ export default function Favorites() {
           <h1 className="text-3xl font-black text-slate-900">⭐ الدروس المحفوظة</h1>
           <p className="text-slate-500 mt-1">{lessons.length} درس محفوظ للوصول السريع.</p>
         </div>
-        <Link to="/subjects" className="bg-violet-600 text-white font-bold px-6 py-3 rounded-xl hover:bg-violet-700 transition-colors text-sm">اكتشف المزيد</Link>
+        <Link to="/subjects" className="bg-teal-600 text-white font-bold px-6 py-3 rounded-xl hover:bg-teal-700 transition-colors text-sm">اكتشف المزيد</Link>
       </div>
 
       {lessons.length > 0 && (
         <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-          <button onClick={() => setSubjectFilter('all')} className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-colors ${subjectFilter === 'all' ? 'bg-violet-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:border-violet-300'}`}>
+          <button onClick={() => setSubjectFilter('all')} className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-colors ${subjectFilter === 'all' ? 'bg-teal-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:border-teal-300'}`}>
             الكل ({lessons.length})
           </button>
           {subjects.map((s) => (
-            <button key={s} onClick={() => setSubjectFilter(s)} className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-colors ${subjectFilter === s ? 'bg-violet-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:border-violet-300'}`}>
+            <button key={s} onClick={() => setSubjectFilter(s)} className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-colors ${subjectFilter === s ? 'bg-teal-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:border-teal-300'}`}>
               {s}
             </button>
           ))}
@@ -77,7 +77,7 @@ export default function Favorites() {
                       <Badge>{l.subject_name}</Badge>
                       <span className="text-slate-400">{l.grade_name}</span>
                     </div>
-                    <h3 className="font-extrabold text-slate-900 leading-6 group-hover:text-violet-700 transition-colors">{l.title}</h3>
+                    <h3 className="font-extrabold text-slate-900 leading-6 group-hover:text-teal-700 transition-colors">{l.title}</h3>
                     <p className="text-sm text-slate-500 mt-2">⏱ {l.duration} دقيقة • {l.level}</p>
                   </div>
                 </Link>

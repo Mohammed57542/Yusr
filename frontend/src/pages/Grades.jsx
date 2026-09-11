@@ -10,11 +10,11 @@ export default function Grades() {
 
   return (
     <div>
-      <div className="bg-gradient-to-br from-violet-700 via-purple-800 to-indigo-900 text-white">
+      <div className="bg-gradient-to-br from-teal-700 via-cyan-800 to-night text-white">
         <div className="max-w-7xl mx-auto px-4 py-16 text-center">
           <span className="inline-block px-4 py-1.5 rounded-full bg-white/10 border border-white/20 text-sm font-bold mb-5">المراحل الدراسية</span>
           <h1 className="text-4xl md:text-5xl font-black mb-4">اختر صفّك وابدأ رحلة التفوق</h1>
-          <p className="text-violet-200 text-lg max-w-2xl mx-auto">محتوى مصمم بعناية لكل صف من الثامن حتى الثاني عشر وفق المنهج العُماني.</p>
+          <p className="text-teal-200 text-lg max-w-2xl mx-auto">محتوى مصمم بعناية لكل صف من الثامن حتى الثاني عشر وفق المنهج العُماني.</p>
         </div>
       </div>
 
@@ -28,10 +28,10 @@ export default function Grades() {
                 <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-white text-3xl font-black mb-5 shadow-lg" style={{ background: g.color }}>
                   {g.id}
                 </div>
-                <h2 className="text-xl font-extrabold text-slate-900 mb-2 group-hover:text-violet-700 transition-colors">{g.name}</h2>
+                <h2 className="text-xl font-extrabold text-slate-900 mb-2 group-hover:text-teal-700 transition-colors">{g.name}</h2>
                 <p className="text-slate-500 text-sm leading-7 mb-4">{g.tagline}</p>
                 <p className="text-slate-400 text-xs mb-6">🎥 {g.lesson_count} درس متاح</p>
-                <span className="inline-flex items-center gap-1 text-violet-600 font-bold text-sm group-hover:gap-2 transition-all">
+                <span className="inline-flex items-center gap-1 text-teal-600 font-bold text-sm group-hover:gap-2 transition-all">
                   الدخول <span>←</span>
                 </span>
               </Link>
