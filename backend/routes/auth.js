@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import crypto from 'node:crypto';
 import db from '../db.js';
 import jwt from 'jsonwebtoken';
-import { signToken, signRefreshToken, blockToken, requireAuth, JWT_SECRET } from '../middleware/auth.js';
+import { signToken, signRefreshToken, blockToken, isTokenBlocked, requireAuth, JWT_SECRET } from '../middleware/auth.js';
 import { sendEmail } from '../lib/email.js';
 import { logger } from '../lib/logger.js';
 import rateLimit from '../middleware/rateLimit.js';
@@ -12,7 +12,7 @@ const router = Router();
 
 const RECAPTCHA_SECRET = process.env.RECAPTCHA_SECRET_KEY;
 
-const authLimiter = rateLimit(60000, 10);
+const authLimiter = rateLimit(60000, 20);
 const codeLimiter = rateLimit(300000, 5);
 
 async function verifyRecaptcha(token) {
@@ -70,8 +70,24 @@ router.post('/send-email-code', codeLimiter, async (req, res) => {
   const safeEmail = email.toLowerCase().trim();
   const code = generateCode();
   await storeEmailCode(safeEmail, code);
-  sendEmail(safeEmail, 'verification', code).catch(() => {});
-  console.log(`[EMAIL-VERIFICATION] ${safeEmail} → code sent`);
+
+  // في وضع التطوير: طباعة الرمز لتسهيل الاختبار
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`\n${'═'.repeat(50)}`);
+    console.log(`🔑 رمز التحقق لـ ${safeEmail}: ${code}`);
+    console.log(`${'═'.repeat(50)}\n`);
+  }
+
+  const result = await sendEmail(safeEmail, 'verification', code);
+  if (result.simulation) {
+    console.log(`[EMAIL-VERIFICATION] ${safeEmail} → محاكاة (بيئة تطوير)`);
+    return res.json({ message: 'تم محاكاة إرسال الرمز — بيئة تطوير، راجع الـ Console' });
+  }
+  if (!result.sent) {
+    console.error(`[EMAIL-VERIFICATION] ${safeEmail} → فشل الإرسال: ${result.message}`);
+    return res.status(500).json({ error: 'تعذّر إرسال البريد الإلكتروني، حاول لاحقاً أو تواصل مع الدعم' });
+  }
+  console.log(`[EMAIL-VERIFICATION] ${safeEmail} → تم الإرسال بنجاح`);
   res.json({ message: 'تم إرسال رمز التحقق إلى بريدك الإلكتروني' });
 });
 
@@ -90,7 +106,7 @@ router.post('/verify-email', async (req, res) => {
 router.post('/register', authLimiter, async (req, res) => {
   const { name, email, password, grade, code, recaptchaToken } = req.body;
   if (!name || !email || !password || !code) {
-    return res.status(400).json({ error: 'الرجاء إدخال جميع الحقول المطلوبةรวมاً مع رمز التحقق' });
+    return res.status(400).json({ error: 'الرجاء إدخال جميع الحقول المطلوبة مع رمز التحقق' });
   }
 
   const captchaOk = await verifyRecaptcha(recaptchaToken);
@@ -155,8 +171,12 @@ router.post('/send-reset-code', codeLimiter, async (req, res) => {
   const hashedCode = hashCode(code);
   await db.prepare('DELETE FROM password_resets WHERE user_id = ?').run(user.id);
   await db.prepare('INSERT INTO password_resets (user_id, code, expires_at) VALUES (?, ?, ?)').run(user.id, hashedCode, expiresAt);
-  sendEmail(safeEmail, 'passwordReset', code).catch(() => {});
-  console.log(`[PASSWORD-RESET] ${safeEmail} → code sent`);
+  const result = await sendEmail(safeEmail, 'passwordReset', code);
+  if (result.simulation) {
+    console.log(`[PASSWORD-RESET] ${safeEmail} → محاكاة (بيئة تطوير)`);
+  } else if (!result.sent) {
+    console.error(`[PASSWORD-RESET] ${safeEmail} → فشل الإرسال: ${result.message}`);
+  }
   res.json({ message: 'تم إرسال رمز إعادة التعيين إلى بريدك الإلكتروني' });
 });
 
@@ -205,7 +225,7 @@ router.post('/refresh', authLimiter, async (req, res) => {
   const { refreshToken } = req.body;
   if (!refreshToken) return res.status(400).json({ error: 'refreshToken مطلوب' });
 
-  if (blockToken(refreshToken)) {
+  if (isTokenBlocked(refreshToken)) {
     return res.status(401).json({ error: 'تم إلغاء هذا التوكن' });
   }
 

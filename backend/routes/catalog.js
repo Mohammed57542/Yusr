@@ -248,12 +248,71 @@ router.get('/live-sessions/:id', async (req, res) => {
   res.json({ ...session, participants_count: participants });
 });
 
-router.post('/live-sessions/:id/join', requireAuth, (req, res) => {
-  res.status(400).json({ error: 'البث المباشر غير مدعوم حالياً. الدروس متاحة كتسجيلات مسجلة.' });
+router.post('/live-sessions/:id/join', requireAuth, async (req, res) => {
+  try {
+    const sessionId = Number(req.params.id);
+    const session = await db.prepare('SELECT * FROM live_sessions WHERE id = ?').get(sessionId);
+    if (!session) return res.status(404).json({ error: 'الحصة غير موجودة' });
+
+    // التحقق من أن الحصة مباشرة فعلياً
+    if (session.status !== 'live') {
+      return res.status(400).json({ error: 'الحصة ليست مباشرة حالياً' });
+    }
+
+    // التحقق من الصلاحية (اشتراك أو حصة مجانية)
+    if (session.is_subscribers_only) {
+      const subscription = await db.prepare(
+        "SELECT id FROM user_subjects WHERE user_id = ? AND subject_id = ? AND status = 'active'"
+      ).get(req.user.id, session.subject_id);
+      if (!subscription && req.user.role !== 'admin') {
+        return res.status(403).json({ error: 'يجب الاشتراك في المادة أولاً' });
+      }
+    }
+
+    // التحقق من عدم الانضمام مسبقاً
+    const existing = await db.prepare(
+      'SELECT id FROM session_attendance WHERE session_id = ? AND user_id = ?'
+    ).get(sessionId, req.user.id);
+    if (existing) {
+      return res.status(400).json({ error: 'لقد انضممت لهذه الحصة مسبقاً' });
+    }
+
+    // تسجيل الحضور
+    await db.prepare(
+      'INSERT INTO session_attendance (session_id, user_id, joined_at) VALUES (?, ?, datetime(\'now\'))'
+    ).run(sessionId, req.user.id);
+
+    console.log(`👤 Student ${req.user.name} joined session ${sessionId}`);
+    res.json({ message: 'تم الانضمام بنجاح', meeting_id: session.meeting_id });
+  } catch (err) {
+    console.error('Join session error:', err);
+    res.status(500).json({ error: 'خطأ في الانضمام للحصة' });
+  }
 });
 
-router.post('/live-sessions/:id/leave', requireAuth, (req, res) => {
-  res.status(400).json({ error: 'البث المباشر غير مدعوم حالياً. الدروس متاحة كتسجيلات مسجلة.' });
+router.post('/live-sessions/:id/leave', requireAuth, async (req, res) => {
+  try {
+    const sessionId = Number(req.params.id);
+    const attendance = await db.prepare(
+      'SELECT * FROM session_attendance WHERE session_id = ? AND user_id = ?'
+    ).get(sessionId, req.user.id);
+    if (!attendance) return res.status(404).json({ error: 'لم تكن منضم لهذه الحصة' });
+
+    // تحديث وقت المغادرة والمدة
+    const leftAt = new Date().toISOString();
+    const joinedAt = new Date(attendance.joined_at).getTime();
+    const durationSeconds = Math.floor((Date.now() - joinedAt) / 1000);
+
+    await db.prepare(
+      "UPDATE session_attendance SET left_at = ?, duration_seconds = ? WHERE session_id = ? AND user_id = ?"
+    ).run(leftAt, durationSeconds, sessionId, req.user.id);
+
+    console.log(`👤 Student ${req.user.name} left session ${sessionId} (${durationSeconds}s)`);
+    res.json({ message: 'تم المغادرة', duration_seconds: durationSeconds });
+  } catch (err) {
+    console.error('Leave session error:', err);
+    res.status(500).json({ error: 'خطأ في مغادرة الحصة' });
+  }
 });
 
 router.get('/live-sessions/:id/attendance', requireAuth, (req, res) => {

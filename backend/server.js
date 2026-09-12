@@ -27,6 +27,8 @@ import uploadsRoutes from './routes/uploads.js';
 import analyticsRoutes from './routes/analytics.js';
 import notificationsRoutes from './routes/notifications.js';
 import recommendationsRoutes from './routes/recommendations.js';
+import ambassadorRoutes from './routes/ambassador.js';
+import { verifySmtpConnection } from './lib/email.js';
 import { logger, initAdminLog } from './lib/logger.js';
 import { JWT_SECRET } from './middleware/auth.js';
 import db from './db.js';
@@ -85,7 +87,17 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '2mb' }));
 
-// حماية من الطلبات المتكررة
+// حماية من الطلبات المتكررة — حد عام لكل مسارات /api
+const generalApiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'طلبات كثيرة جداً — حاول بعد 15 دقيقة' },
+});
+app.use('/api', generalApiLimiter);
+
+// حدود أكثر صرامة على auth و ai
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 40,
@@ -146,6 +158,7 @@ app.use('/api/uploads', uploadsRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/recommendations', recommendationsRoutes);
+app.use('/api/ambassador', ambassadorRoutes); // بانتظار واجهة أمامية
 
 // Uploads static serving — في الإنتاج تتطلب توكن
 const uploadsAuth = isProd
@@ -205,6 +218,8 @@ if (isMain) {
 
   app.listen(PORT, () => {
     console.log(`🚀 منصة يسر التعليمية تعمل على المنفذ ${PORT} [${isProd ? 'production' : 'development'}]`);
+    // فحص اتصال SMTP
+    verifySmtpConnection();
   });
 }
 

@@ -12,7 +12,17 @@ function formatDuration(minutes) {
   return `${m} دقيقة`;
 }
 
-function SessionCard({ session, index }) {
+function formatDateTime(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  return d.toLocaleDateString('ar-OM', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) + ' — ' + d.toLocaleTimeString('ar-OM', { hour: '2-digit', minute: '2-digit' });
+}
+
+function SessionCard({ session, index, activeTab }) {
+  const isLive = activeTab === 'live';
+  const isUpcoming = activeTab === 'upcoming';
+  const isRecorded = activeTab === 'recorded';
+
   return (
     <div
       className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all animate-fade-up"
@@ -26,15 +36,19 @@ function SessionCard({ session, index }) {
           className="absolute inset-0 opacity-10"
           style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)', backgroundSize: '18px 18px' }}
         />
-        {session.video_url ? (
-          <Link to={`/lessons/${session.id || ''}`} className="relative w-16 h-16 rounded-full bg-white/25 border-2 border-white/50 backdrop-blur flex items-center justify-center hover:scale-110 transition-transform">
+        {isLive ? (
+          <Link to={`/live/${session.id}`} className="relative w-16 h-16 rounded-full bg-red-500 border-4 border-white shadow-lg flex items-center justify-center animate-pulse hover:scale-110 transition-transform">
+            <span className="text-white font-bold text-sm">مباشر</span>
+          </Link>
+        ) : isRecorded && session.video_url ? (
+          <Link to={`/live/${session.id || ''}`} className="relative w-16 h-16 rounded-full bg-white/25 border-2 border-white/50 backdrop-blur flex items-center justify-center hover:scale-110 transition-transform">
             <svg className="w-7 h-7 mr-1 text-white" fill="currentColor" viewBox="0 0 24 24">
               <path d="M8 5v14l11-7z" />
             </svg>
           </Link>
         ) : (
           <div className="relative w-16 h-16 rounded-full bg-white/25 border-2 border-white/50 backdrop-blur flex items-center justify-center">
-            <span className="text-2xl">⏳</span>
+            <span className="text-2xl">{isUpcoming ? '📅' : '⏳'}</span>
           </div>
         )}
         <span className="absolute top-4 right-4 w-11 h-11 rounded-xl bg-white/90 flex items-center justify-center text-xl">
@@ -45,11 +59,19 @@ function SessionCard({ session, index }) {
             {formatDuration(session.duration_minutes)}
           </span>
         )}
+        {isLive && (
+          <span className="absolute top-4 left-4 px-2.5 py-1 rounded-lg bg-red-500 text-white text-xs font-bold animate-pulse">
+            🔴 مباشر الآن
+          </span>
+        )}
       </div>
 
       <div className="p-6">
         <div className="flex items-center justify-between text-xs text-slate-400 mb-2">
           <span>{session.subject_name} • {session.grade_name}</span>
+          {isUpcoming && session.scheduled_at && (
+            <span className="text-teal-600 font-bold">{formatDateTime(session.scheduled_at)}</span>
+          )}
         </div>
 
         <h3 className="font-extrabold text-slate-900 leading-6 mb-3">{session.title}</h3>
@@ -60,14 +82,25 @@ function SessionCard({ session, index }) {
           <p className="text-xs text-slate-400 mb-4 line-clamp-2">{session.description}</p>
         )}
 
-        {session.video_url ? (
+        {isLive && (
+          <Link to={`/live/${session.id}`} className="block text-center bg-red-500 text-white font-extrabold py-3 rounded-xl animate-pulse hover:bg-red-600 transition-all">
+            انضم الآن
+          </Link>
+        )}
+        {isUpcoming && (
+          <div className="text-center bg-slate-100 text-slate-500 font-bold py-3 rounded-xl">
+            يبدأ {session.scheduled_at ? formatDateTime(session.scheduled_at) : 'قريباً'}
+          </div>
+        )}
+        {isRecorded && session.video_url && (
           <Link
-            to={`/lessons/${session.id || ''}`}
+            to={`/live/${session.id || ''}`}
             className="block text-center bg-gradient-to-l from-teal-600 to-cyan-600 text-white font-extrabold py-3 rounded-xl hover:-translate-y-0.5 transition-all"
           >
             شاهد الحصة المسجلة
           </Link>
-        ) : (
+        )}
+        {isRecorded && !session.video_url && (
           <div className="text-center bg-slate-100 text-slate-400 font-bold py-3 rounded-xl cursor-default">
             سيكون متاحاً قريباً
           </div>
@@ -77,6 +110,12 @@ function SessionCard({ session, index }) {
   );
 }
 
+const TABS = [
+  { key: 'live', label: '🔴 المباشرة الآن', filter: 'live' },
+  { key: 'upcoming', label: '📅 القادمة', filter: 'upcoming' },
+  { key: 'recorded', label: '🎥 المسجلة', filter: 'recorded' },
+];
+
 export default function LiveSessions() {
   const [sessions, setSessions] = useState([]);
   const [subjects, setSubjects] = useState([]);
@@ -85,6 +124,7 @@ export default function LiveSessions() {
   const [search, setSearch] = useState('');
   const [subjectFilter, setSubjectFilter] = useState('');
   const [gradeFilter, setGradeFilter] = useState('');
+  const [activeTab, setActiveTab] = useState('recorded');
 
   useEffect(() => {
     Promise.all([
@@ -98,11 +138,12 @@ export default function LiveSessions() {
 
   useEffect(() => {
     setLoading(true);
-    api.get('/live-sessions?status=recorded')
+    const status = activeTab === 'live' ? 'live' : activeTab === 'upcoming' ? 'upcoming' : 'recorded';
+    api.get(`/live-sessions?status=${status}`)
       .then((data) => setSessions(Array.isArray(data) ? data : []))
       .catch(() => setSessions([]))
       .finally(() => setLoading(false));
-  }, []);
+  }, [activeTab]);
 
   const filtered = useMemo(() => {
     return sessions.filter((s) => {
@@ -117,14 +158,31 @@ export default function LiveSessions() {
     <div>
       <div className="bg-gradient-to-br from-teal-700 via-cyan-800 to-night text-white">
         <div className="max-w-7xl mx-auto px-4 py-16 text-center">
-          <Breadcrumbs items={[{ label: 'الدروس المسجلة' }]} />
-          <span className="inline-block px-4 py-1.5 rounded-full bg-white/10 border border-white/20 text-sm font-bold mb-5">الدروس</span>
-          <h1 className="text-4xl md:text-5xl font-black mb-4">الدروس المسجلة</h1>
-          <p className="text-teal-200 text-lg max-w-2xl mx-auto">شاهد الدروس المسجلة في أي وقت — تعلّم بالسرعة التي تناسبك وكرّر الدرس ما شئت.</p>
+          <Breadcrumbs items={[{ label: 'الحصص المباشرة' }]} />
+          <span className="inline-block px-4 py-1.5 rounded-full bg-white/10 border border-white/20 text-sm font-bold mb-5">البث المباشر</span>
+          <h1 className="text-4xl md:text-5xl font-black mb-4">الحصص المباشرة والمسجلة</h1>
+          <p className="text-teal-200 text-lg max-w-2xl mx-auto">تابع الحصص المباشرة أو شاهد التسجيلات في أي وقت.</p>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-10">
+        {/* Tabs */}
+        <div className="flex gap-3 mb-8 overflow-x-auto pb-2">
+          {TABS.map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`px-6 py-3 rounded-2xl font-bold text-sm whitespace-nowrap transition-all ${
+                activeTab === tab.key
+                  ? 'bg-teal-600 text-white shadow-lg'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
         <div className="flex flex-wrap items-center gap-3 mb-8">
           <input
             type="text"
@@ -160,13 +218,13 @@ export default function LiveSessions() {
         ) : filtered.length === 0 ? (
           <EmptyState
             icon="🎥"
-            title="لا توجد دروس مسجلة بعد"
-            description="ستُضاف الدروس المسجلة قريباً — تابعنا!"
+            title={activeTab === 'live' ? 'لا توجد حصص مباشرة الآن' : activeTab === 'upcoming' ? 'لا توجد حصص قادمة' : 'لا توجد دروس مسجلة بعد'}
+            description={activeTab === 'live' ? 'تابعنا — ستبدأ حصص مباشرة قريباً!' : activeTab === 'upcoming' ? 'سيتم إضافة حصص قادمة قريباً' : 'ستُضاف الدروس المسجلة قريباً — تابعنا!'}
           />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filtered.map((s, i) => (
-              <SessionCard key={s.id} session={s} index={i} />
+              <SessionCard key={s.id} session={s} index={i} activeTab={activeTab} />
             ))}
           </div>
         )}

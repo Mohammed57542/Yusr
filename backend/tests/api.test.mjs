@@ -132,6 +132,20 @@ test('007 تسجيل الخروج وحظر التوكن', async () => {
   studentRefresh = login.data.refreshToken;
 });
 
+test('007b التحديث بعد تسجيل الخروج يجب أن يُرفض', async () => {
+  // حفظ Refresh الحالي
+  const savedRefresh = studentRefresh;
+  // تسجيل خروج
+  await json('/api/auth/logout', { method: 'POST', token: studentToken, body: { refreshToken: savedRefresh } });
+  // محاولة استخدام نفس الـrefreshToken بعد الخروج — يجب أن يُرفض
+  const { status } = await json('/api/auth/refresh', { method: 'POST', body: { refreshToken: savedRefresh } });
+  assert.equal(status, 401);
+  // إعادة تسجيل الدخول للحصول على توكن جديد للاختبارات التالية
+  const login = await json('/api/auth/login', { method: 'POST', body: { identifier: 'student@yusr.edu.om', password: 'password123' } });
+  studentToken = login.data.token;
+  studentRefresh = login.data.refreshToken;
+});
+
 test('008 كلمة المرور القصيرة مرفوضة', async () => {
   const bcrypt = await import('bcryptjs');
   const email = `short_${rand()}@test.com`;

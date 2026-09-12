@@ -1,6 +1,5 @@
-const requests = new Map();
-
-function rateLimit(windowMs = 60000, max = 30) {
+function rateLimit(windowMs = 60000, max = 30, name = 'default') {
+  const requests = new Map();
   return (req, res, next) => {
     const key = req.ip || req.connection?.remoteAddress || 'unknown';
     const now = Date.now();

@@ -124,10 +124,12 @@ export default function StudyPlan() {
   const handleAutoGenerate = async () => {
     try {
       setGenerating(true);
+      setError('');
       await api.post('/study-plans/generate');
       fetchPlans();
     } catch (err) {
       console.error('Error generating plan:', err);
+      setError(err.message || 'فشل إنشاء الخطة الدراسية — حاول مرة أخرى');
     } finally {
       setGenerating(false);
     }

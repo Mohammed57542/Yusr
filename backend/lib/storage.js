@@ -32,6 +32,10 @@ class LocalStorage {
     return true;
   }
 
+  async getUploadUrl(key, contentType, expiresIn = 3600) {
+    throw new Error('getUploadUrl غير مدعوم بالتخزين المحلي — استخدم S3 أو R2');
+  }
+
   async getBuffer(key) {
     const filePath = path.join(this.baseDir, key);
     return fs.readFileSync(filePath);
@@ -92,6 +96,18 @@ class S3Storage {
     const client = await this._getClient();
     await client.send(new this._DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
     return true;
+  }
+
+  async getUploadUrl(key, contentType, expiresIn = 3600) {
+    const { getSignedUrl } = await import('@aws-sdk/s3-request-presigner');
+    const client = await this._getClient();
+    const command = new this._PutObjectCommand({
+      Bucket: this.bucket,
+      Key: key,
+      ContentType: contentType,
+    });
+    const url = await getSignedUrl(client, command, { expiresIn });
+    return { url, key, expiresInSeconds: expiresIn };
   }
 }
 

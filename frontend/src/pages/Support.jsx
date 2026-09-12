@@ -42,7 +42,7 @@ export default function Support() {
   useEffect(() => {
     if (authLoading) return;
     if (!user) { navigate('/login'); return; }
-    api.get('/support/tickets')
+    api.get('/support/')
       .then((r) => setTickets(r.tickets || r || []))
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
@@ -53,7 +53,7 @@ export default function Support() {
     setSubmitting(true);
     setError('');
     try {
-      const res = await api.post('/support/tickets', form);
+      const res = await api.post('/support/', form);
       setTickets((prev) => [res.ticket || res, ...prev]);
       setForm({ subject: '', category: '', message: '' });
       setShowForm(false);
@@ -69,7 +69,7 @@ export default function Support() {
     setDetailLoading(true);
     setTicketDetail(null);
     try {
-      const res = await api.get(`/support/tickets/${ticket.id}`);
+      const res = await api.get(`/support/${ticket.id}`);
       setTicketDetail(res.ticket || res);
     } catch (err) {
       setError(err.message);
@@ -83,8 +83,8 @@ export default function Support() {
     if (!reply.trim()) return;
     setReplySending(true);
     try {
-      await api.post(`/support/tickets/${selectedTicket.id}/reply`, { message: reply });
-      const res = await api.get(`/support/tickets/${selectedTicket.id}`);
+      await api.post(`/support/${selectedTicket.id}/messages`, { message: reply });
+      const res = await api.get(`/support/${selectedTicket.id}`);
       setTicketDetail(res.ticket || res);
       setTickets((prev) => prev.map((t) => t.id === selectedTicket.id ? { ...t, status: 'waiting' } : t));
       setReply('');

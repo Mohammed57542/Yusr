@@ -32,6 +32,14 @@ export default function TeacherDashboard() {
   const [questions, setQuestions] = useState([]);
   const [assignments, setAssignments] = useState([]);
   const [classrooms, setClassrooms] = useState([]);
+  const [sessions, setSessions] = useState([]);
+  const [showSessionForm, setShowSessionForm] = useState(false);
+  const [sessionForm, setSessionForm] = useState({ title: '', description: '', grade_id: '', subject_id: '', session_date: '', session_time: '', duration_minutes: 60, is_subscribers_only: true, is_recorded: true, max_participants: 50 });
+  const [editingSession, setEditingSession] = useState(null);
+  const [activeRoom, setActiveRoom] = useState(null);
+  const [uploadingSession, setUploadingSession] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadStatus, setUploadStatus] = useState('');
   const [subjects, setSubjects] = useState([]);
   const [grades, setGrades] = useState([]);
   const [units, setUnits] = useState([]);
@@ -81,6 +89,110 @@ export default function TeacherDashboard() {
     setError('');
     api.get('/teacher/questions').then(setQuestions).catch((e) => setError(e.message));
   };
+
+  const loadSessions = () => {
+    setError('');
+    api.get('/teacher/sessions').then(setSessions).catch((e) => setError(e.message));
+  };
+
+  const saveSession = async (e) => {
+    e.preventDefault();
+    setError('');
+    try {
+      if (editingSession) {
+        await api.patch(`/teacher/sessions/${editingSession.id}`, sessionForm);
+      } else {
+        await api.post('/teacher/sessions', sessionForm);
+      }
+      setShowSessionForm(false);
+      setEditingSession(null);
+      setSessionForm({ title: '', description: '', grade_id: '', subject_id: '', session_date: '', session_time: '', duration_minutes: 60, is_subscribers_only: true, is_recorded: true, max_participants: 50 });
+      loadSessions();
+    } catch (e) { setError(e.message); }
+  };
+
+  const deleteSession = async (id) => {
+    if (!confirm('هل أنت متأكد من حذف هذه الحصة؟')) return;
+    setError('');
+    try { await api.del(`/teacher/sessions/${id}`); loadSessions(); } catch (e) { setError(e.message); }
+  };
+
+  const startSession = async (id) => {
+    setError('');
+    try {
+      const result = await api.post(`/teacher/sessions/${id}/start`);
+      setActiveRoom({ sessionId: id, meetingId: result.meeting_id });
+      loadSessions();
+    } catch (e) { setError(e.message); }
+  };
+
+const endSession = async (id) => {
+  setError('');
+  try {
+    await api.post(`/teacher/sessions/${id}/end`);
+    setActiveRoom(null);
+    loadSessions();
+  } catch (e) { setError(e.message); }
+};
+
+const uploadRecording = async (sessionId, file) => {
+  try {
+    setUploadingSession(sessionId);
+    setUploadProgress(0);
+    setUploadStatus('جاري إنشاء رابط الرفع...');
+
+    // 1._presign
+    const presignData = await api.post('/uploads/presign', {
+      filename: file.name,
+      contentType: file.type,
+      purpose: 'session-recording',
+    });
+
+    // 2. Upload directly to presigned URL
+    setUploadStatus('جاري رفع الملف...');
+    await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) {
+          setUploadProgress(Math.round((e.loaded / e.total) * 100));
+        }
+      };
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) resolve();
+        else reject(new Error('فشل الرفع'));
+      };
+      xhr.onerror = () => reject(new Error('خطأ في الشبكة'));
+      xhr.open('PUT', presignData.uploadUrl);
+      xhr.setRequestHeader('Content-Type', file.type);
+      xhr.send(file);
+    });
+
+    // 3. Confirm
+    setUploadStatus('جاري تأكيد الرفع...');
+    await api.post('/uploads/confirm', { uploadId: presignData.uploadId, size: file.size });
+
+    // 4. Link to session
+    setUploadStatus('جاري ربط التسجيل بالحصة...');
+    await api.post(`/uploads/${presignData.uploadId}/link-session`, { session_id: sessionId });
+
+    setUploadStatus('✅ تم ربط التسجيل بنجاح!');
+    setUploadProgress(100);
+    loadSessions();
+
+    setTimeout(() => {
+      setUploadingSession(null);
+      setUploadProgress(0);
+      setUploadStatus('');
+    }, 2000);
+  } catch (e) {
+    setUploadStatus(`❌ فشل: ${e.message}`);
+    setTimeout(() => {
+      setUploadingSession(null);
+      setUploadProgress(0);
+      setUploadStatus('');
+    }, 3000);
+  }
+};
 
   const saveLesson = async (e) => {
     e.preventDefault();
@@ -202,6 +314,7 @@ export default function TeacherDashboard() {
     if (id === 'lessons') loadLessons();
     if (id === 'exams') loadExams();
     if (id === 'questions') loadQuestions();
+    if (id === 'sessions') loadSessions();
   };
 
   if (!user) return null;
@@ -343,7 +456,7 @@ export default function TeacherDashboard() {
           <h2 className="text-xl font-extrabold text-slate-900">📦 إدارة المحتوى</h2>
         </div>
         <div className="flex flex-wrap gap-2 mb-6">
-          {[{ id: 'lessons', label: '📚 الدروس' }, { id: 'exams', label: '📝 الاختبارات' }, { id: 'questions', label: '❓ بنك الأسئلة' }, { id: 'assignments', label: '📋 الواجبات' }, { id: 'classrooms', label: '🏫 الفصول' }].map((t) => (
+          {[{ id: 'lessons', label: '📚 الدروس' }, { id: 'exams', label: '📝 الاختبارات' }, { id: 'questions', label: '❓ بنك الأسئلة' }, { id: 'assignments', label: '📋 الواجبات' }, { id: 'classrooms', label: '🏫 الفصول' }, { id: 'sessions', label: '🔴 الحصص المباشرة' }].map((t) => (
             <button key={t.id} onClick={() => { openContentTab(t.id); if (t.id === 'assignments') api.get('/assignments').then(setAssignments).catch(() => {}); if (t.id === 'classrooms') api.get('/classrooms').then(setClassrooms).catch(() => {}); }} className={`px-5 py-2.5 rounded-2xl text-sm font-bold transition-all ${contentTab === t.id ? 'bg-teal-600 text-white shadow-lg shadow-teal-200' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
               {t.label}
             </button>
@@ -652,6 +765,127 @@ export default function TeacherDashboard() {
               <a href="/classrooms" className="bg-teal-600 text-white font-extrabold px-6 py-3 rounded-xl hover:bg-teal-700 transition-colors text-sm inline-block">إدارة الفصول</a>
             </div>
             <EmptyState icon="🏫" title="الفصول الافتراضية" description="أنشئ فصلاً افتراضياً لتنظيم طلابك ودروسك." />
+          </div>
+        )}
+
+        {contentTab === 'sessions' && (
+          <div className="space-y-6">
+            <div className="flex justify-end">
+              <button onClick={() => { setShowSessionForm(!showSessionForm); setEditingSession(null); setSessionForm({ title: '', description: '', grade_id: '', subject_id: '', session_date: '', session_time: '', duration_minutes: 60, is_subscribers_only: true, is_recorded: true, max_participants: 50 }); }} className="bg-teal-600 text-white font-extrabold px-6 py-3 rounded-xl hover:bg-teal-700 transition-colors text-sm">
+                {showSessionForm ? 'إلغاء' : 'إنشاء حصة جديدة'}
+              </button>
+            </div>
+
+            {showSessionForm && (
+              <div className="bg-slate-50 rounded-3xl border border-slate-200 p-6">
+                <h3 className="text-lg font-extrabold text-slate-900 mb-4">{editingSession ? '✏️ تعديل الحصة' : '➕ إنشاء حصة جديدة'}</h3>
+                <form onSubmit={saveSession} className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <input value={sessionForm.title} onChange={(e) => setSessionForm({ ...sessionForm, title: e.target.value })} placeholder="عنوان الحصة" className="px-4 py-3 rounded-xl border border-slate-200 font-bold text-sm md:col-span-2" required />
+                  <select value={sessionForm.subject_id} onChange={(e) => setSessionForm({ ...sessionForm, subject_id: e.target.value })} className="px-4 py-3 rounded-xl border border-slate-200 text-sm" required>
+                    <option value="">المادة</option>
+                    {subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                  <select value={sessionForm.grade_id} onChange={(e) => setSessionForm({ ...sessionForm, grade_id: e.target.value })} className="px-4 py-3 rounded-xl border border-slate-200 text-sm" required>
+                    <option value="">الصف</option>
+                    {grades.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+                  </select>
+                  <textarea value={sessionForm.description} onChange={(e) => setSessionForm({ ...sessionForm, description: e.target.value })} placeholder="الوصف" className="px-4 py-3 rounded-xl border border-slate-200 text-sm md:col-span-4" rows={2} />
+                  <input value={sessionForm.session_date} onChange={(e) => setSessionForm({ ...sessionForm, session_date: e.target.value })} placeholder="التاريخ" className="px-4 py-3 rounded-xl border border-slate-200 text-sm" type="date" required />
+                  <input value={sessionForm.session_time} onChange={(e) => setSessionForm({ ...sessionForm, session_time: e.target.value })} placeholder="الوقت" className="px-4 py-3 rounded-xl border border-slate-200 text-sm" type="time" required />
+                  <input value={sessionForm.duration_minutes} onChange={(e) => setSessionForm({ ...sessionForm, duration_minutes: e.target.value })} placeholder="المدة (دقيقة)" className="px-4 py-3 rounded-xl border border-slate-200 text-sm" type="number" min="1" required />
+                  <input value={sessionForm.max_participants} onChange={(e) => setSessionForm({ ...sessionForm, max_participants: e.target.value })} placeholder="الحد الأقصى للمشاركين" className="px-4 py-3 rounded-xl border border-slate-200 text-sm" type="number" min="1" />
+                  <label className="flex items-center gap-2 text-sm font-bold text-slate-700 cursor-pointer">
+                    <input type="checkbox" checked={sessionForm.is_subscribers_only} onChange={(e) => setSessionForm({ ...sessionForm, is_subscribers_only: e.target.checked })} className="w-4 h-4 accent-teal-600" />
+                    للمشتركين فقط
+                  </label>
+                  <label className="flex items-center gap-2 text-sm font-bold text-slate-700 cursor-pointer">
+                    <input type="checkbox" checked={sessionForm.is_recorded} onChange={(e) => setSessionForm({ ...sessionForm, is_recorded: e.target.checked })} className="w-4 h-4 accent-teal-600" />
+                    تسجيل تلقائي
+                  </label>
+                  <div className="flex gap-2 md:col-span-4">
+                    <button type="submit" className="flex-1 bg-teal-600 text-white font-extrabold py-3 rounded-xl hover:bg-teal-700 transition-colors">{editingSession ? 'حفظ التعديلات' : 'إنشاء الحصة'}</button>
+                    {editingSession && <button type="button" onClick={() => { setEditingSession(null); setShowSessionForm(false); }} className="px-6 py-3 rounded-xl bg-slate-100 text-slate-600 font-bold text-sm">إلغاء</button>}
+                  </div>
+                </form>
+              </div>
+            )}
+
+            {activeRoom && (
+              <div className="bg-slate-50 rounded-3xl border border-slate-200 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-extrabold text-slate-900">🔴 الحصة مباشرة</h3>
+                  <button onClick={() => endSession(activeRoom.sessionId)} className="bg-red-600 text-white font-extrabold px-6 py-2.5 rounded-xl hover:bg-red-700 transition-colors text-sm">أنهِ الحصة</button>
+                </div>
+                <iframe src={`https://meet.jit.si/${activeRoom.meetingId}`} style={{ width: '100%', height: '500px', border: '0', borderRadius: '16px' }} allow="camera;microphone" />
+              </div>
+            )}
+
+            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-x-auto">
+              <table className="w-full text-sm min-w-[700px]">
+                <thead className="bg-slate-50 text-slate-500 text-xs">
+                  <tr>
+                    <th className="text-right px-6 py-4">الحصة</th>
+                    <th className="text-right px-6 py-4">المادة</th>
+                    <th className="text-right px-6 py-4">التاريخ والوقت</th>
+                    <th className="text-right px-6 py-4">الحالة</th>
+                    <th className="text-right px-6 py-4">إجراءات</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sessions.map((s) => (
+                    <tr key={s.id} className="border-t border-slate-100">
+                      <td className="px-6 py-4 font-bold text-slate-800 max-w-[260px]">
+                        <span className="line-clamp-1" title={s.title}>{s.title}</span>
+                        <span className="text-xs text-slate-400 block">{s.subject_name} • {s.grade_name}</span>
+                      </td>
+                      <td className="px-6 py-4 text-slate-500">{s.subject_name}</td>
+                      <td className="px-6 py-4 text-slate-600" dir="ltr">{s.session_date} {s.session_time}</td>
+                      <td className="px-6 py-4">
+                        <span className={`px-3 py-1 rounded-full text-xs font-black ${
+                          s.status === 'live' ? 'bg-red-100 text-red-700' :
+                          s.status === 'upcoming' ? 'bg-yellow-100 text-yellow-700' :
+                          s.status === 'recorded' ? 'bg-green-100 text-green-700' :
+                          'bg-slate-100 text-slate-500'
+                        }`}>
+                          {s.status === 'live' ? 'مباشر' : s.status === 'upcoming' ? 'قادمة' : s.status === 'recorded' ? 'مسجلة' : 'منتهية'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex gap-2 flex-wrap">
+                          {s.status === 'upcoming' && (
+                            <button onClick={() => startSession(s.id)} className="bg-green-50 text-green-600 text-xs font-black px-3 py-1.5 rounded-lg hover:bg-green-100">ابدأ الحصة</button>
+                          )}
+                          {s.status === 'live' && (
+                            <button onClick={() => endSession(s.id)} className="bg-red-50 text-red-600 text-xs font-black px-3 py-1.5 rounded-lg hover:bg-red-100">أنهِ الحصة</button>
+                          )}
+                          {(s.status === 'ended' || s.status === 'recorded') && (
+                            <label className="bg-blue-50 text-blue-600 text-xs font-black px-3 py-1.5 rounded-lg hover:bg-blue-100 cursor-pointer">
+                              📹 ارفع تسجيل
+                              <input type="file" accept="video/*" className="hidden" onChange={(e) => {
+                                const file = e.target.files[0];
+                                if (file) uploadRecording(s.id, file);
+                                e.target.value = '';
+                              }} />
+                            </label>
+                          )}
+                          {uploadingSession === s.id && (
+                            <div className="flex-1 min-w-[120px]">
+                              <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                                <div className="h-full bg-blue-500 rounded-full transition-all" style={{ width: `${uploadProgress}%` }} />
+                              </div>
+                              <p className="text-xs text-slate-500 mt-1">{uploadStatus}</p>
+                            </div>
+                          )}
+                          <button onClick={() => { setEditingSession(s); setSessionForm({ title: s.title, description: s.description || '', grade_id: s.grade_id, subject_id: s.subject_id, session_date: s.session_date, session_time: s.session_time, duration_minutes: s.duration_minutes, is_subscribers_only: !!s.is_subscribers_only, is_recorded: !!s.is_recorded, max_participants: s.max_participants || 50 }); setShowSessionForm(true); }} className="bg-slate-100 text-slate-700 text-xs font-black px-3 py-1.5 rounded-lg hover:bg-slate-200">تعديل</button>
+                          <button onClick={() => deleteSession(s.id)} className="bg-red-50 text-red-600 text-xs font-black px-3 py-1.5 rounded-lg hover:bg-red-100">حذف</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {sessions.length === 0 && <tr><td colSpan="5" className="text-center py-8 text-slate-400">لا توجد حصص بعد.</td></tr>}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>

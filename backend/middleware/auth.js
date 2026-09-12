@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import crypto from 'node:crypto';
 import db from '../db.js';
 
 const isProd = process.env.NODE_ENV === 'production';
@@ -18,11 +19,11 @@ const ACCESS_TOKEN_EXPIRY = '15m';
 const REFRESH_TOKEN_EXPIRY = '7d';
 
 export function signToken(user) {
-  return jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: ACCESS_TOKEN_EXPIRY });
+  return jwt.sign({ id: user.id, role: user.role, jti: crypto.randomUUID() }, JWT_SECRET, { expiresIn: ACCESS_TOKEN_EXPIRY });
 }
 
 export function signRefreshToken(user) {
-  return jwt.sign({ id: user.id, role: user.role, type: 'refresh' }, JWT_SECRET, { expiresIn: REFRESH_TOKEN_EXPIRY });
+  return jwt.sign({ id: user.id, role: user.role, type: 'refresh', jti: crypto.randomUUID() }, JWT_SECRET, { expiresIn: REFRESH_TOKEN_EXPIRY });
 }
 
 const tokenBlocklist = new Set();
@@ -42,7 +43,7 @@ export async function requireAuth(req, res, next) {
   }
   const token = header.slice(7);
   if (isTokenBlocked(token)) {
-    return res.status(401).json({ error: 'الجلسة已 أُلغيت، يرجى تسجيل الدخول مجدداً' });
+    return res.status(401).json({ error: 'الجلسة أُلغيت، يرجى تسجيل الدخول مجدداً' });
   }
   try {
     const payload = jwt.verify(token, JWT_SECRET);

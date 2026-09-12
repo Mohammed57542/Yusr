@@ -170,4 +170,102 @@ router.get('/suggest', requireAuth, async (req, res) => {
   }
 });
 
+// Generate automatic study plan based on performance
+router.post('/generate', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const gradeId = req.user.grade;
+
+    // 1. Get subscribed subjects
+    const subscribedIds = (await db.prepare("SELECT subject_id FROM user_subjects WHERE user_id = ? AND status = 'active'")
+      .all(userId)).map(r => r.subject_id);
+
+    if (subscribedIds.length === 0) {
+      return res.status(400).json({ error: 'يجب الاشتراك في مادة أولاً لإنشاء خطة دراسية' });
+    }
+
+    // 2. Get weak areas (subjects with low exam scores)
+    const weakSubjects = await db.prepare(`
+      SELECT er.subject_id, s.name as subject_name,
+             AVG(CASE WHEN er.score IS NOT NULL THEN er.score ELSE 0 END) as avg_score,
+             COUNT(er.id) as attempts
+      FROM exam_results er
+      JOIN exams e ON e.id = er.exam_id
+      JOIN subjects s ON s.id = er.subject_id
+      WHERE er.user_id = ? AND er.subject_id IN (${subscribedIds.map(() => '?').join(',')})
+      GROUP BY er.subject_id
+      ORDER BY avg_score ASC
+    `).all(userId, ...subscribedIds);
+
+    // 3. Get weak topics from mistakes_log
+    const weakTopics = await db.prepare(`
+      SELECT ml.subject_id, s.name as subject_name, COUNT(*) as mistake_count
+      FROM mistakes_log ml
+      JOIN subjects s ON s.id = ml.subject_id
+      WHERE ml.user_id = ? AND ml.subject_id IN (${subscribedIds.map(() => '?').join(',')})
+      GROUP BY ml.subject_id
+      ORDER BY mistake_count DESC
+    `).all(userId, ...subscribedIds);
+
+    // 4. Get published lessons for weak subjects (prioritize weak areas)
+    const subjectPriority = {};
+    for (const ws of weakSubjects) subjectPriority[ws.subject_id] = 100 - ws.avg_score;
+    for (const wt of weakTopics) subjectPriority[wt.subject_id] = (subjectPriority[wt.subject_id] || 0) + wt.mistake_count * 10;
+
+    const sortedSubjects = Object.entries(subjectPriority)
+      .sort(([, a], [, b]) => b - a)
+      .map(([id]) => Number(id));
+
+    // Add remaining subscribed subjects
+    for (const sid of subscribedIds) {
+      if (!sortedSubjects.includes(sid)) sortedSubjects.push(sid);
+    }
+
+    const lessons = [];
+    for (const sid of sortedSubjects.slice(0, 5)) {
+      const subLessons = await db.prepare(`
+        SELECT l.id, l.title, s.name as subject_name, l.duration
+        FROM lessons l JOIN subjects s ON s.id = l.subject_id
+        WHERE l.grade_id = ? AND l.subject_id = ? AND l.status = 'published'
+        ORDER BY l.order_index LIMIT 3
+      `).all(gradeId || 8, sid);
+      lessons.push(...subLessons);
+    }
+
+    if (lessons.length === 0) {
+      return res.status(400).json({ error: 'لا توجد دروس متاحة لإنشاء خطة دراسية' });
+    }
+
+    // 5. Create the study plan
+    const days = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس'];
+    const result = await db.prepare('INSERT INTO study_plans (user_id, title, description, subject_id, target_date) VALUES (?, ?, ?, ?, ?)')
+      .run(userId, 'خطة تلقائية', `خطة دراسية مبنية على تحليل أداءك — ${new Date().toLocaleDateString('ar-OM')}`, sortedSubjects[0], null);
+    const planId = result.lastInsertRowid;
+
+    // 6. Add lessons as items
+    const insert = db.prepare('INSERT INTO study_plan_items (plan_id, lesson_id, day_of_week, time_slot, duration_minutes) VALUES (?, ?, ?, ?, ?)');
+    for (let i = 0; i < lessons.length; i++) {
+      const day = days[i % days.length];
+      const time = `${8 + (i % 4) * 2}:00`;
+      await insert.run(planId, lessons[i].id, day, time, lessons[i].duration || 30);
+    }
+
+    // 7. Return the created plan
+    const plan = await db.prepare('SELECT * FROM study_plans WHERE id = ?').get(planId);
+    plan.items = await db.prepare(`
+      SELECT spi.*, l.title AS lesson_title, s.name AS subject_name
+      FROM study_plan_items spi
+      LEFT JOIN lessons l ON spi.lesson_id = l.id
+      LEFT JOIN subjects s ON s.id = l.subject_id
+      WHERE spi.plan_id = ?
+    `).all(planId);
+
+    console.log(`📚 Auto-generated study plan for user ${userId}: ${lessons.length} lessons`);
+    res.status(201).json(plan);
+  } catch (err) {
+    console.error('Generate plan error:', err);
+    res.status(500).json({ error: 'خطأ في إنشاء الخطة الدراسية' });
+  }
+});
+
 export default router;

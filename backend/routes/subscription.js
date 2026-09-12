@@ -208,6 +208,15 @@ router.post('/webhook/myfatoorah', async (req, res) => {
     const signature = req.headers['myfatoorah-signature'] || '';
     const webhookSecret = process.env.MYFATOORAH_WEBHOOK_SECRET;
 
+    // في الإنتاج: رفض الطلب إذا لم يتم ضبط السر
+    if (!webhookSecret) {
+      if (process.env.NODE_ENV === 'production') {
+        console.error('[WEBHOOK] ⛔ MYFATOORAH_WEBHOOK_SECRET غير مضبوط — رفض الطلب في الإنتاج');
+        return res.status(503).json({ error: 'Webhook not configured' });
+      }
+      console.warn('[WEBHOOK] ⚠️ MYFATOORAH_WEBHOOK_SECRET غير مضبوط — تجاوز التحقق (وضع التطوير فقط)');
+    }
+
     if (webhookSecret) {
       if (!signature) {
         return res.status(401).json({ error: 'Missing webhook signature' });

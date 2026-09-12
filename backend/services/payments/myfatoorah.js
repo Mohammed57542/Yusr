@@ -105,7 +105,9 @@ import crypto from 'node:crypto';
 export function verifyWebhookSignature(payload, signature, secret) {
   if (!secret || !signature) return false;
   const hmac = crypto.createHmac('sha256', secret).update(JSON.stringify(payload)).digest('hex');
-  return hmac === signature;
+  // استخدام timingSafeEqual لمنع هجمات الوقت
+  if (hmac.length !== signature.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(hmac), Buffer.from(signature));
 }
 
 export function getStatusFromWebhook(payload) {

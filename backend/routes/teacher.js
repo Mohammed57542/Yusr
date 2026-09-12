@@ -441,6 +441,49 @@ router.get('/sessions/:id/attendance', async (req, res) => {
   res.json(attendance);
 });
 
+// ─── Start / End Live Session ───
+router.post('/sessions/:id/start', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const session = await db.prepare('SELECT * FROM live_sessions WHERE id = ?').get(id);
+    if (!session) return res.status(404).json({ error: 'الجلسة غير موجودة' });
+    if (session.created_by !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'غير مصرح ببدء هذه الحصة' });
+    }
+
+    // توليد معرف غرفة فريد
+    const crypto = await import('node:crypto');
+    const meetingId = `yusr-${id}-${crypto.randomBytes(6).toString('hex')}`;
+
+    await db.prepare("UPDATE live_sessions SET status = 'live', meeting_id = ? WHERE id = ?").run(meetingId, id);
+
+    console.log(`🔴 Session ${id} started by ${req.user.name} → ${meetingId}`);
+    res.json({ message: 'تم بدء الحصة المباشرة', meeting_id: meetingId });
+  } catch (err) {
+    console.error('Start session error:', err);
+    res.status(500).json({ error: 'خطأ في بدء الحصة' });
+  }
+});
+
+router.post('/sessions/:id/end', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const session = await db.prepare('SELECT * FROM live_sessions WHERE id = ?').get(id);
+    if (!session) return res.status(404).json({ error: 'الجلسة غير موجودة' });
+    if (session.created_by !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'غير مصرح بإنهاء هذه الحصة' });
+    }
+
+    await db.prepare("UPDATE live_sessions SET status = 'ended' WHERE id = ?").run(id);
+
+    console.log(`⏹️ Session ${id} ended by ${req.user.name}`);
+    res.json({ message: 'تم إنهاء الحصة' });
+  } catch (err) {
+    console.error('End session error:', err);
+    res.status(500).json({ error: 'خطأ في إنهاء الحصة' });
+  }
+});
+
 // ─── Exam Analytics ───
 router.get('/exam-analytics/:examId', async (req, res) => {
   const exam = await db.prepare(`

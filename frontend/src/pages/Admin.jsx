@@ -265,7 +265,13 @@ const [plans, setPlans] = useState([]);
 
   const toggleTeacherSubject = async (teacherId, subjectId) => {
     setError('');
-    try { await api.post(`/admin/teachers/${teacherId}/subjects`, { subject_id: subjectId }); loadTeachers(); } catch (e) { setError(e.message); }
+    try {
+      const teacher = teachers.find(t => t.id === teacherId);
+      const currentIds = (teacher.subjects || []).map(s => s.id);
+      const newIds = currentIds.includes(subjectId) ? currentIds.filter(id => id !== subjectId) : [...currentIds, subjectId];
+      await api.patch(`/admin/teachers/${teacherId}/subjects`, { subject_ids: newIds });
+      loadTeachers();
+    } catch (e) { setError(e.message); }
   };
 
   const toggleTeacher = async (teacherId, enabled) => {

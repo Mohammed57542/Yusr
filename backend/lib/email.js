@@ -143,12 +143,13 @@ const templates = {
 async function sendEmail(to, templateName, ...args) {
   const template = templates[templateName](...args);
   if (!isProd) {
-    console.log(`[EMAIL] To: ${to} | Subject: ${template.subject}`);
-    return true;
+    console.log(`[EMAIL DEV] To: ${to} | Subject: ${template.subject}`);
+    console.log(`[EMAIL DEV] محاكاة فقط — بيئة تطوير، لم يُرسل أي بريد فعلي`);
+    return { sent: false, simulation: true, message: 'محاكاة — بيئة تطوير' };
   }
   if (!transporter) {
     console.error('[EMAIL] SMTP not configured — cannot send email');
-    return false;
+    return { sent: false, simulation: false, message: 'SMTP غير مُعد' };
   }
   try {
     await transporter.sendMail({
@@ -157,11 +158,32 @@ async function sendEmail(to, templateName, ...args) {
       subject: template.subject,
       html: template.html,
     });
-    return true;
+    return { sent: true, simulation: false };
   } catch (err) {
     console.error(`[EMAIL] Failed to send to ${to}:`, err.message);
+    return { sent: false, simulation: false, message: err.message };
+  }
+}
+
+// فحص اتصال SMTP عند بدء التشغيل
+async function verifySmtpConnection() {
+  if (!isProd) {
+    console.log('[EMAIL] وضع التطوير — تم تخطي فحص SMTP');
+    return true;
+  }
+  if (!transporter) {
+    console.error('[EMAIL] ⛔ SMTP غير مُعد — البريد لن يُرسل');
+    return false;
+  }
+  try {
+    await transporter.verify();
+    console.log('[EMAIL] ✅ اتصال SMTP ناجح — البريد جاهز للإرسال');
+    return true;
+  } catch (err) {
+    console.error('[EMAIL] ⛔ فشل اتصال SMTP:', err.message);
+    console.error('[EMAIL] تأكد من صحة SMTP_USER و SMTP_PASS و SMTP_HOST');
     return false;
   }
 }
 
-export { sendEmail, templates };
+export { sendEmail, templates, verifySmtpConnection };
