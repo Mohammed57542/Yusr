@@ -13,22 +13,20 @@ function Hero() {
   if (loading) return <SkeletonHero />;
 
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-teal-500 via-teal-700 to-night text-white">
+    <section className="relative overflow-hidden bg-gradient-to-br from-teal-700 via-cyan-800 to-night text-white">
       <div className="absolute inset-0 opacity-10">
         <div className="absolute top-10 right-10 w-72 h-72 rounded-full bg-white blur-3xl" />
-        <div className="absolute bottom-0 left-10 w-96 h-96 rounded-full bg-amber-400 blur-3xl" />
+        <div className="absolute bottom-0 left-10 w-96 h-96 rounded-full bg-white blur-3xl" />
       </div>
       <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)', backgroundSize: '28px 28px' }} />
       <div className="max-w-7xl mx-auto px-4 py-20 lg:py-28 grid lg:grid-cols-2 gap-12 items-center relative">
         <div className="animate-fade-up">
-          <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/20 text-sm font-bold mb-6">
-            🇴🇲 المنهج العُماني • الصف ٨ حتى ١٢
-          </span>
+
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-black leading-tight mb-6">
             تعلّم بطريقة أسهل
             <span className="block text-transparent bg-clip-text bg-gradient-to-l from-gold-200 to-gold-400">مع يُسر</span>
           </h1>
-          <p className="text-lg text-teal-100 leading-relaxed mb-8 max-w-xl">
+          <p className="text-lg text-blue-100 leading-relaxed mb-8 max-w-xl">
             منصة تعليمية لطلاب المدارس في سلطنة عُمان — دروس مسجلة بجودة عالية، اختبارات تفاعلية، وموارد تعليمية في مكان واحد.
           </p>
           <div className="flex flex-wrap gap-4">

@@ -130,7 +130,7 @@ export default function StudentSettings() {
         <div className="max-w-7xl mx-auto px-4 py-16 text-center">
           <span className="inline-block px-4 py-1.5 rounded-full bg-white/10 border border-white/20 text-sm font-bold mb-5">حسابي</span>
           <h1 className="text-4xl md:text-5xl font-black mb-4">⚙️ الإعدادات</h1>
-          <p className="text-slate-300 text-lg max-w-2xl mx-auto">أدِر حسابك وتفضيلاتك和个人信息.</p>
+          <p className="text-slate-300 text-lg max-w-2xl mx-auto">أدِر حسابك وتفضيلاتك الشخصية.</p>
         </div>
       </div>
 

@@ -77,7 +77,7 @@ app.use(helmet({
 
 const allowedOrigins = process.env.CORS_ORIGINS
   ? process.env.CORS_ORIGINS.split(',').map((s) => s.trim())
-  : ['http://localhost:5173', 'http://localhost:5000', 'http://localhost:5054'];
+  : ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:5000', 'http://localhost:5054'];
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin || allowedOrigins.includes(origin)) return callback(null, true);

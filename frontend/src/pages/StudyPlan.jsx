@@ -63,6 +63,7 @@ export default function StudyPlan() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [subjects, setSubjects] = useState([]);
   const [generating, setGenerating] = useState(false);
+  const [error, setError] = useState('');
 
   const [newPlan, setNewPlan] = useState({
     title: '',
@@ -80,7 +81,7 @@ export default function StudyPlan() {
     try {
       setLoading(true);
       const res = await api.get('/study-plans');
-      setPlans(res.data);
+      setPlans(Array.isArray(res) ? res : (res.data || res.plans || []));
     } catch (err) {
       console.error('Error fetching plans:', err);
     } finally {
@@ -91,7 +92,7 @@ export default function StudyPlan() {
   const fetchSubjects = async () => {
     try {
       const res = await api.get('/subjects');
-      setSubjects(res.data);
+      setSubjects(Array.isArray(res) ? res : (res.data || []));
     } catch (err) {
       console.error('Error fetching subjects:', err);
     }
@@ -101,7 +102,7 @@ export default function StudyPlan() {
     try {
       setDetailLoading(true);
       const res = await api.get(`/study-plans/${planId}`);
-      setSelectedPlan(res.data);
+      setSelectedPlan(res.data || res);
     } catch (err) {
       console.error('Error fetching plan detail:', err);
     } finally {

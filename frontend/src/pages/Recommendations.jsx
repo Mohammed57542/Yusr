@@ -90,7 +90,7 @@ export default function Recommendations() {
         <section className="mb-8">
           <h2 className="text-xl font-bold text-slate-800 mb-4">🔄 أسئلة للمراجعة</h2>
           <div className="bg-amber-50 rounded-2xl border border-amber-200 p-5">
-            <p className="text-amber-700 font-medium mb-3">لديك {data.weakQuestions.length} أسئلة تحتاج مراجعة (间隔重复)</p>
+            <p className="text-amber-700 font-medium mb-3">لديك {data.weakQuestions.length} أسئلة تحتاج مراجعة</p>
             <Link to="/mistakes" className="inline-block bg-amber-500 text-white font-bold px-6 py-2 rounded-xl hover:bg-amber-600">
               راجع الآن ←
             </Link>
