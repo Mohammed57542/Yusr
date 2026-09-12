@@ -12,14 +12,7 @@ logs/
 Thumbs.db
 frontend/dist/
 backend/data/
-
-# ملفات غير مرتبطة
-AutoVideoPlayer/
-minecraft-nav-oman/
-advanced_post_exploitation_framework/
-mihwar/
-detect_reverse_shell.py
-reverse_shell_example.py
-reverse_shell_guide.md
-aa-aniq-bold.otf
-شارة-مخارج.png
+yusr-platform.zip
+yusr-platform-full.zip
+index.html
+Screenshot*.jpg
