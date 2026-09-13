@@ -70,4 +70,4 @@ services:
       # CORS — اسم الموقع الأمامي بعد النشر
       # ═══════════════════════════════════════════════════════════
       - key: CORS_ORIGINS
-        value: "https://yasr.onrender.com"  # غيّر هذا للرابط الحقيقي بعد النشر
+        value: "https://yusr-platform.onrender.com"
