@@ -45,7 +45,7 @@ function InvoiceDetail({ invoice, onBack }) {
   <div class="header">
     <div>
       <h1>فاتورة ضريبية</h1>
-      <p style="color:#64748b; margin-top:8px;">منصة يُسر التعليمية</p>
+      <p style="color:#64748b; margin-top:8px;">منصة يسر</p>
     </div>
     <div class="logo">🧾</div>
   </div>
@@ -65,7 +65,7 @@ function InvoiceDetail({ invoice, onBack }) {
     </tbody>
   </table>
   <div class="footer">
-    <p>منصة يُسر التعليمية — جميع الحقوق محفوظة</p>
+    <p>منصة يسر — جميع الحقوق محفوظة</p>
     <p>هذا مستند إلكتروني صالح بدون توقيع</p>
   </div>
 </body>

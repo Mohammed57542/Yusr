@@ -294,7 +294,7 @@ function Footer() {
         </div>
       </div>
       <div className="border-t border-slate-200 py-5 text-center text-sm text-slate-500">
-        © 2026 منصة يُسر التعليمية. جميع الحقوق محفوظة.
+        © 2026 منصة يسر. جميع الحقوق محفوظة.
       </div>
     </footer>
   );
