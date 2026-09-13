@@ -1,73 +1,44 @@
 services:
   - type: web
     name: yusr-platform
-    runtime: node
+    runtime: docker
     plan: free
-    buildCommand: cd frontend && npm install && npm run build && cd ../backend && npm install
-    startCommand: cd backend && node server.js
     envVars:
-      # ═══════════════════════════════════════════════════════════
-      # متغيرات البيئة الأساسية
-      # ═══════════════════════════════════════════════════════════
       - key: NODE_ENV
         value: production
       - key: JWT_SECRET
         value: "yusr-prod-2026-very-secure-random-key-xk9f3m"
       - key: PORT
         value: 10000
-
-      # ═══════════════════════════════════════════════════════════
-      # قاعدة البيانات — يجب تعبئتها يدويًا من لوحة Render
-      # أنشئ قاعدة بيانات PostgreSQL على Render وانسخ الرابط هنا
-      # ═══════════════════════════════════════════════════════════
       - key: DATABASE_URL
         value: "postgresql://neondb_owner:npg_smN5vF8uXEoj@ep-odd-band-b2pb0auj-pooler.c-6.eu-central-1.aws.neon.tech/neondb?sslmode=require"
-
-      # ═══════════════════════════════════════════════════════════
-      # البريد الإلكتروني (اختياري — للتحقق من الحسابات)
-      # استخدم Gmail App Password أو أي مزود SMTP
-      # ═══════════════════════════════════════════════════════════
+      - key: CORS_ORIGINS
+        value: "https://yusr-platform.onrender.com"
+      - key: STORAGE_DRIVER
+        value: local
       - key: SMTP_HOST
         value: smtp.gmail.com
       - key: SMTP_PORT
         value: "587"
       - key: SMTP_USER
-        value: ""  # <-- ضع بريدك الإلكتروني هنا
+        value: ""
       - key: SMTP_PASS
-        value: ""  # <-- ضع كلمة مرور تطبيق Gmail هنا
-
-      # ═══════════════════════════════════════════════════════════
-      # الدفع الإلكتروني (اختياري — لتفعيل الاشتراكات المدفوعة)
-      # سجّل في MyFatoorah: https://myfatoorah.com
-      # ═══════════════════════════════════════════════════════════
+        value: ""
       - key: PAYMENT_PROVIDER
         value: myfatoorah
       - key: MYFATOORAH_TEST_MODE
-        value: "true"  # غيّر إلى "false" عند الإنتاج
+        value: "true"
       - key: MYFATOORAH_API_KEY
-        value: ""  # <-- ضع مفتاح MyFatoorah هنا
-
-      # ═══════════════════════════════════════════════════════════
-      # التخزين السحابي (اختياري — لرفع الملفات والفيديوهات)
-      # استخدم Cloudflare R2 أو AWS S3
-      # ═══════════════════════════════════════════════════════════
-      - key: STORAGE_DRIVER
-        value: local  # غيّر إلى "r2" أو "s3" عند تفعيل التخزين السحابي
+        value: ""
       - key: S3_BUCKET
-        value: ""  # <-- ضع اسم الـ Bucket هنا
+        value: ""
       - key: S3_REGION
         value: auto
       - key: S3_ENDPOINT
-        value: ""  # <-- ضع رابط Endpoint هنا
+        value: ""
       - key: S3_PUBLIC_BASE
-        value: ""  # <-- ضع الرابط العام للملفات هنا
+        value: ""
       - key: S3_ACCESS_KEY_ID
-        value: ""  # <-- ضع Access Key هنا
+        value: ""
       - key: S3_SECRET_ACCESS_KEY
-        value: ""  # <-- ضع Secret Key هنا
-
-      # ═══════════════════════════════════════════════════════════
-      # CORS — اسم الموقع الأمامي بعد النشر
-      # ═══════════════════════════════════════════════════════════
-      - key: CORS_ORIGINS
-        value: "https://yusr-platform.onrender.com"
+        value: ""

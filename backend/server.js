@@ -116,12 +116,12 @@ if (fs.existsSync(frontendDist)) {
 }
 
 // Health Check مع فحص قاعدة البيانات
-app.get('/api/health', (_req, res) => {
+app.get('/api/health', async (_req, res) => {
   if (!db) {
     return res.json({ name: 'منصة يسر التعليمية - API', status: 'running', db: 'not_configured', timestamp: new Date().toISOString() });
   }
   try {
-    const dbCheck = db.prepare('SELECT 1 as ok').get();
+    const dbCheck = await db.prepare('SELECT 1 as ok').get();
     const uptime = process.uptime();
     const mem = process.memoryUsage();
     res.json({
@@ -188,28 +188,31 @@ app.use((err, _req, res, _next) => {
 // Subscription Expiry Cron — يشغّل كل ساعة
 // ═══════════════════════════════════════════
 function expireSubscriptions() {
-  try {
-    const result = db.prepare(
-      "UPDATE user_subjects SET status = 'expired' WHERE status = 'active' AND expires_at IS NOT NULL AND expires_at < datetime('now')"
-    ).run();
-    if (result.changes > 0) {
-      logger.info('subscriptions_expired', { count: result.changes });
+  if (!db) return;
+  Promise.resolve().then(async () => {
+    try {
+      await db.prepare(
+        "UPDATE user_subjects SET status = 'expired' WHERE status = 'active' AND expires_at IS NOT NULL AND expires_at < datetime('now')"
+      ).run();
+    } catch (err) {
+      logger.error('subscription_expiry_error', { message: err.message });
     }
-  } catch (err) {
-    logger.error('subscription_expiry_error', { message: err.message });
-  }
+  });
 }
 
 // ═══════════════════════════════════════════
 // Cleanup Old Codes — يشغّل كل 6 ساعات
 // ═══════════════════════════════════════════
 function cleanupOldCodes() {
-  try {
-    db.prepare("DELETE FROM email_verifications WHERE expires_at < datetime('now', '-1 day')").run();
-    db.prepare("DELETE FROM password_resets WHERE expires_at < datetime('now', '-1 day')").run();
-  } catch (err) {
-    logger.error('cleanup_error', { message: err.message });
-  }
+  if (!db) return;
+  Promise.resolve().then(async () => {
+    try {
+      await db.prepare("DELETE FROM email_verifications WHERE expires_at < datetime('now', '-1 day')").run();
+      await db.prepare("DELETE FROM password_resets WHERE expires_at < datetime('now', '-1 day')").run();
+    } catch (err) {
+      logger.error('cleanup_error', { message: err.message });
+    }
+  });
 }
 
 // شغّل الـ cron jobs
