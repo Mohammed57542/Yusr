@@ -1,28 +1,18 @@
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
 const isProd = process.env.NODE_ENV === 'production';
 
-const transporter = isProd
-  ? nodemailer.createTransport({
-      host: process.env.SMTP_HOST || 'smtp.gmail.com',
-      port: Number(process.env.SMTP_PORT) || 587,
-      secure: Number(process.env.SMTP_PORT) === 465,
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-      connectionTimeout: 15000,
-      greetingTimeout: 10000,
-      socketTimeout: 15000,
-    })
-  : null;
+let resend = null;
+if (isProd && process.env.RESEND_API_KEY) {
+  resend = new Resend(process.env.RESEND_API_KEY);
+}
 
 const BRAND = {
   name: 'يُسر',
   color: '#0d9488',
   colorDark: '#152c34',
   gold: '#f7be67',
-  url: process.env.FRONTEND_URL || 'https://yusr.edu.om',
+  url: process.env.FRONTEND_URL || 'https://yusr-platform.onrender.com',
   phone: '96895123456',
   email: 'info@yusr.edu.om',
 };
@@ -111,7 +101,7 @@ const templates = {
     subject: `تم قبول طلبك — ${BRAND.name}`,
     html: wrapTemplate('قبول طلب المعلم', `
       <h2>أهلاً ${name}!</h2>
-      <p style="font-size:18px;color:${BRAND.color};font-weight:bold">🎉 مبروك! تم قبول طلبك كمعلم في ${BRAND.name}</p>
+      <p style="font-size:18px;color:${BRAND.color};font-weight:bold">مبروك! تم قبول طلبك كمعلم في ${BRAND.name}</p>
       <p>يمكنك الآن تسجيل الدخول باستخدام حسابك والبدء في إنشاء المحتوى التعليمي.</p>
       <a href="${BRAND.url}/login" class="btn">تسجيل الدخول</a>
     `),
@@ -143,6 +133,8 @@ const templates = {
   }),
 };
 
+const FROM_EMAIL = 'onboarding@resend.dev';
+
 async function sendEmail(to, templateName, ...args) {
   const template = templates[templateName](...args);
   if (!isProd) {
@@ -150,17 +142,18 @@ async function sendEmail(to, templateName, ...args) {
     console.log(`[EMAIL DEV] محاكاة فقط — بيئة تطوير، لم يُرسل أي بريد فعلي`);
     return { sent: false, simulation: true, message: 'محاكاة — بيئة تطوير' };
   }
-  if (!transporter) {
-    console.error('[EMAIL] SMTP not configured — cannot send email');
-    return { sent: false, simulation: false, message: 'SMTP غير مُعد' };
+  if (!resend) {
+    console.error('[EMAIL] Resend not configured — no RESEND_API_KEY');
+    return { sent: false, simulation: false, message: 'Resend غير مُعد' };
   }
   try {
-    await transporter.sendMail({
-      from: `"${BRAND.name}" <${process.env.SMTP_USER}>`,
+    await resend.emails.send({
+      from: `${BRAND.name} <${FROM_EMAIL}>`,
       to,
       subject: template.subject,
       html: template.html,
     });
+    console.log(`[EMAIL] ✅ Sent to ${to} — ${template.subject}`);
     return { sent: true, simulation: false };
   } catch (err) {
     console.error(`[EMAIL] Failed to send to ${to}:`, err.message);
@@ -168,25 +161,17 @@ async function sendEmail(to, templateName, ...args) {
   }
 }
 
-// فحص اتصال SMTP عند بدء التشغيل
 async function verifySmtpConnection() {
   if (!isProd) {
-    console.log('[EMAIL] وضع التطوير — تم تخطي فحص SMTP');
+    console.log('[EMAIL] وضع التطوير — تم تخطي فحص البريد');
     return true;
   }
-  if (!transporter) {
-    console.error('[EMAIL] ⛔ SMTP غير مُعد — البريد لن يُرسل');
+  if (!resend) {
+    console.error('[EMAIL] ⛔ Resend غير مُعد — البريد لن يُرسل');
     return false;
   }
-  try {
-    await transporter.verify();
-    console.log('[EMAIL] ✅ اتصال SMTP ناجح — البريد جاهز للإرسال');
-    return true;
-  } catch (err) {
-    console.error('[EMAIL] ⛔ فشل اتصال SMTP:', err.message);
-    console.error('[EMAIL] تأكد من صحة SMTP_USER و SMTP_PASS و SMTP_HOST');
-    return false;
-  }
+  console.log('[EMAIL] ✅ Resend جاهز — البريد جاهز للإرسال');
+  return true;
 }
 
 export { sendEmail, templates, verifySmtpConnection };
