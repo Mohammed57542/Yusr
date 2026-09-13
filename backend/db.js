@@ -36,7 +36,7 @@ const initPostgres = async () => true;
 // ═══════════════════════════════════════════════════════════
 // Schema Initialization (SQLite only — PG uses migrations)
 // ═══════════════════════════════════════════════════════════
-if (!process.env.DATABASE_URL) {
+if (!process.env.DATABASE_URL && db) {
   initSqliteSchema();
 }
 
