@@ -5,7 +5,7 @@ import jwt from 'jsonwebtoken';
 import rateLimit from 'express-rate-limit';
 import path from 'node:path';
 import fs from 'node:fs';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 import authRoutes from './routes/auth.js';
 import catalogRoutes from './routes/catalog.js';
 import examRoutes from './routes/exams.js';
@@ -117,6 +117,9 @@ if (fs.existsSync(frontendDist)) {
 
 // Health Check مع فحص قاعدة البيانات
 app.get('/api/health', (_req, res) => {
+  if (!db) {
+    return res.json({ name: 'منصة يسر التعليمية - API', status: 'running', db: 'not_configured', timestamp: new Date().toISOString() });
+  }
   try {
     const dbCheck = db.prepare('SELECT 1 as ok').get();
     const uptime = process.uptime();
@@ -209,18 +212,15 @@ function cleanupOldCodes() {
   }
 }
 
-const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
-if (isMain) {
-  // شغّل الـ cron jobs
-  setInterval(expireSubscriptions, 60 * 60 * 1000);
-  setInterval(cleanupOldCodes, 6 * 60 * 60 * 1000);
-  expireSubscriptions();
+// شغّل الـ cron jobs
+setInterval(expireSubscriptions, 60 * 60 * 1000);
+setInterval(cleanupOldCodes, 6 * 60 * 60 * 1000);
+expireSubscriptions();
 
-  app.listen(PORT, () => {
-    console.log(`🚀 منصة يسر التعليمية تعمل على المنفذ ${PORT} [${isProd ? 'production' : 'development'}]`);
-    // فحص اتصال SMTP
-    verifySmtpConnection();
-  });
-}
+app.listen(PORT, () => {
+  console.log(`🚀 منصة يسر التعليمية تعمل على المنفذ ${PORT} [${isProd ? 'production' : 'development'}]`);
+  // فحص اتصال SMTP
+  verifySmtpConnection();
+});
 
 export default app;
