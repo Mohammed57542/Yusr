@@ -4,7 +4,7 @@
   "description": "منصة يُسر التعليمية — دروس واختبارات وفق المنهج العُماني",
   "type": "module",
   "scripts": {
-    "start": "node --env-file=.env backend/server.js",
+    "start": "node backend/server.js",
     "seed": "node --env-file=.env backend/seed.js",
     "dev": "node --env-file=.env --watch backend/server.js",
     "test": "node --test backend/tests/*.test.mjs",
