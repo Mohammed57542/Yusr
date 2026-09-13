@@ -21,7 +21,7 @@ services:
       # أنشئ قاعدة بيانات PostgreSQL على Render وانسخ الرابط هنا
       # ═══════════════════════════════════════════════════════════
       - key: DATABASE_URL
-        value: ""  # <-- ضع رابط PostgreSQL هنا (مثلاً: postgresql://user:pass@host:5432/dbname)
+        value: "postgresql://neondb_owner:npg_smN5vF8uXEoj@ep-odd-band-b2pb0auj-pooler.c-6.eu-central-1.aws.neon.tech/neondb?sslmode=require"
 
       # ═══════════════════════════════════════════════════════════
       # البريد الإلكتروني (اختياري — للتحقق من الحسابات)
@@ -70,4 +70,4 @@ services:
       # CORS — اسم الموقع الأمامي بعد النشر
       # ═══════════════════════════════════════════════════════════
       - key: CORS_ORIGINS
-        value: ""  # <-- ضع رابط الموقع هنا (مثلاً: https://yusr-platform.onrender.com)
+        value: "https://yasr.onrender.com"  # غيّر هذا للرابط الحقيقي بعد النشر
