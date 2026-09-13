@@ -12,7 +12,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: JWT_SECRET
-        generateValue: true
+        value: "yusr-prod-2026-very-secure-random-key-xk9f3m"
       - key: PORT
         value: 10000
 
