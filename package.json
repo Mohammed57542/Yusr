@@ -4,12 +4,12 @@
   "description": "منصة يُسر التعليمية — دروس واختبارات وفق المنهج العُماني",
   "type": "module",
   "scripts": {
+    "build": "cd frontend && npm install && npm run build",
+    "postinstall": "cd backend && npm install",
     "start": "node backend/server.js",
-    "seed": "node --env-file=.env backend/seed.js",
     "dev": "node --env-file=.env --watch backend/server.js",
     "test": "node --test backend/tests/*.test.mjs",
-    "build": "cd frontend && npm install && npm run build",
-    "postinstall": "cd backend && npm install"
+    "seed": "node --env-file=.env backend/seed.js"
   },
   "engines": {
     "node": ">=20.0.0"
