@@ -4,26 +4,34 @@ import db from '../db.js';
 
 const isProd = process.env.NODE_ENV === 'production';
 
-function resolveSecret() {
+const ACCESS_TOKEN_EXPIRY = '15m';
+const REFRESH_TOKEN_EXPIRY = '7d';
+
+let _jwtSecret = null;
+
+function getJwtSecret() {
+  if (_jwtSecret) return _jwtSecret;
   const secret = process.env.JWT_SECRET;
   if (!secret) {
     if (isProd) throw new Error('JWT_SECRET غير مضبوط — لا يمكن تشغيل الخادم في بيئة الإنتاج بدونه');
     console.warn('[تحذير] JWT_SECRET غير مضبوط — أمان ضعيف في بيئة التطوير');
-    return 'yusr-dev-only-not-for-production';
+    _jwtSecret = 'yusr-dev-only-not-for-production';
+    return _jwtSecret;
   }
-  return secret;
+  _jwtSecret = secret;
+  return _jwtSecret;
 }
 
-const JWT_SECRET = resolveSecret();
-const ACCESS_TOKEN_EXPIRY = '15m';
-const REFRESH_TOKEN_EXPIRY = '7d';
+const JWT_SECRET = (() => {
+  try { return getJwtSecret(); } catch { return ''; }
+})();
 
 export function signToken(user) {
-  return jwt.sign({ id: user.id, role: user.role, jti: crypto.randomUUID() }, JWT_SECRET, { expiresIn: ACCESS_TOKEN_EXPIRY });
+  return jwt.sign({ id: user.id, role: user.role, jti: crypto.randomUUID() }, getJwtSecret(), { expiresIn: ACCESS_TOKEN_EXPIRY });
 }
 
 export function signRefreshToken(user) {
-  return jwt.sign({ id: user.id, role: user.role, type: 'refresh', jti: crypto.randomUUID() }, JWT_SECRET, { expiresIn: REFRESH_TOKEN_EXPIRY });
+  return jwt.sign({ id: user.id, role: user.role, type: 'refresh', jti: crypto.randomUUID() }, getJwtSecret(), { expiresIn: REFRESH_TOKEN_EXPIRY });
 }
 
 const tokenBlocklist = new Set();

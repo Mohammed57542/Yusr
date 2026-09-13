@@ -33,7 +33,7 @@ import { logger, initAdminLog } from './lib/logger.js';
 import { JWT_SECRET } from './middleware/auth.js';
 import db from './db.js';
 
-initAdminLog(db);
+if (db) initAdminLog(db);
 
 const app = express();
 const PORT = process.env.PORT || 5000;

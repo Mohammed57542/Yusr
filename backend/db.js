@@ -20,9 +20,15 @@ if (process.env.DATABASE_URL) {
   isAsync = true;
   console.log('✅ Using Neon PostgreSQL');
 } else {
-  const mod = await import('./db/sqlite.js');
-  db = mod.default;
-  console.log('✅ Using SQLite (local)');
+  try {
+    const mod = await import('./db/sqlite.js');
+    db = mod.default;
+    console.log('✅ Using SQLite (local)');
+  } catch (err) {
+    console.error('⚠️ SQLite not available:', err.message);
+    console.log('⚠️ Running without database — set DATABASE_URL to connect');
+    db = null;
+  }
 }
 
 const initPostgres = async () => true;
