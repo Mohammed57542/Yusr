@@ -59,6 +59,7 @@ class S3Storage {
     this._client = new S3Client({
       region: this.region,
       endpoint: this.endpoint,
+      forcePathStyle: true,
       credentials: {
         accessKeyId: this.accessKeyId,
         secretAccessKey: this.secretAccessKey,
