@@ -23,11 +23,15 @@ function toPg(sql) {
 
 function convertSql(sql) {
   return sql
-    .replace(/datetime\('now'\)/gi, 'NOW()')
-    .replace(/datetime\('now',\s*'-1 day'\)/gi, "NOW() - INTERVAL '1 day'")
-    .replace(/datetime\('now',\s*'\+(\d+) days?'\)/gi, "NOW() + INTERVAL '$1 days'")
-    .replace(/AUTOINCREMENT/gi, '')
+    .replace(/strftime\(\s*'%Y-%m'\s*,\s*([^)]+?)\s*\)/gi, 'substr($1, 1, 7)')
+    .replace(/datetime\(\s*'now'\s*,\s*'-(\d+)\s+days?'\s*\)/gi, "(NOW() - INTERVAL '$1 days')::text")
+    .replace(/datetime\(\s*'now'\s*,\s*'\+(\d+)\s+days?'\s*\)/gi, "(NOW() + INTERVAL '$1 days')::text")
+    .replace(/datetime\(\s*'now'\s*\)/gi, 'NOW()::text')
+    .replace(/date\(\s*'now'\s*\)/gi, 'CURRENT_DATE::text')
+    .replace(/GROUP_CONCAT\(\s*DISTINCT\s+([^()]*?)\s*\)/gi, "STRING_AGG(DISTINCT $1, ',')")
+    .replace(/GROUP_CONCAT\(\s*([^(),]*?)\s*\)/gi, "STRING_AGG($1, ',')")
     .replace(/INTEGER PRIMARY KEY AUTOINCREMENT/gi, 'SERIAL PRIMARY KEY')
+    .replace(/AUTOINCREMENT/gi, '')
     .replace(/OR IGNORE/gi, 'ON CONFLICT DO NOTHING');
 }
 
