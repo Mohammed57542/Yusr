@@ -48,6 +48,31 @@ router.post('/', requireAuth, async (req, res) => {
   }
 });
 
+router.get('/suggest', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const gradeId = req.user.grade;
+
+    const subscribedIds = (await db.prepare("SELECT subject_id FROM user_subjects WHERE user_id = ? AND status = 'active'")
+      .all(userId)).map(r => r.subject_id);
+
+    if (subscribedIds.length === 0) return res.json([]);
+
+    const lessons = await db.prepare(`
+      SELECT l.id, l.title, s.name as subject_name
+      FROM lessons l JOIN subjects s ON s.id = l.subject_id
+      WHERE l.grade_id = ? AND l.subject_id IN (${subscribedIds.map(() => '?').join(',')})
+      AND l.status = 'published'
+      ORDER BY l.order_index LIMIT 20
+    `).all(gradeId || 9, ...subscribedIds);
+
+    res.json(lessons);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to suggest plan' });
+  }
+});
+
 router.get('/:id', requireAuth, async (req, res) => {
   try {
     const plan = await db.prepare('SELECT * FROM study_plans WHERE id = ? AND user_id = ?').get(req.params.id, req.user.id);
@@ -141,32 +166,6 @@ router.delete('/:id/items/:itemId', requireAuth, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to delete item' });
-  }
-});
-
-// Suggested plan
-router.get('/suggest', requireAuth, async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const gradeId = req.user.grade;
-
-    const subscribedIds = (await db.prepare("SELECT subject_id FROM user_subjects WHERE user_id = ? AND status = 'active'")
-      .all(userId)).map(r => r.subject_id);
-
-    if (subscribedIds.length === 0) return res.json([]);
-
-    const lessons = await db.prepare(`
-      SELECT l.id, l.title, s.name as subject_name
-      FROM lessons l JOIN subjects s ON s.id = l.subject_id
-      WHERE l.grade_id = ? AND l.subject_id IN (${subscribedIds.map(() => '?').join(',')})
-      AND l.status = 'published'
-      ORDER BY l.order_index LIMIT 20
-    `).all(gradeId || 8, ...subscribedIds);
-
-    res.json(lessons);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to suggest plan' });
   }
 });
 
