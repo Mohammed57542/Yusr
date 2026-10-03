@@ -147,14 +147,18 @@ async function sendEmail(to, templateName, ...args) {
     return { sent: false, simulation: false, message: 'Resend غير مُعد' };
   }
   try {
-    await resend.emails.send({
+    const { data, error } = await resend.emails.send({
       from: `${BRAND.name} <${FROM_EMAIL}>`,
       to,
       subject: template.subject,
       html: template.html,
     });
-    console.log(`[EMAIL] ✅ Sent to ${to} — ${template.subject}`);
-    return { sent: true, simulation: false };
+    if (error) {
+      console.error(`[EMAIL] ⛔ Resend rejected ${to}: ${error.message}`);
+      return { sent: false, simulation: false, message: error.message };
+    }
+    console.log(`[EMAIL] ✅ Sent to ${to} (id: ${data?.id}) — ${template.subject}`);
+    return { sent: true, simulation: false, id: data?.id };
   } catch (err) {
     console.error(`[EMAIL] Failed to send to ${to}:`, err.message);
     return { sent: false, simulation: false, message: err.message };
