@@ -1035,8 +1035,9 @@ router.get('/reports/revenue', async (req, res) => {
   const bySubject = await db.prepare(`
     SELECT s.name as subject_name, SUM(p.amount) as total
     FROM payments p
-    JOIN subjects s ON s.id = CAST(json_each.value AS INTEGER)
-    JOIN json_each(p.subject_ids) WHERE ${wherePaid}
+    JOIN subjects s ON (',' || REPLACE(REPLACE(COALESCE(p.subject_ids, ''), '[', ''), ']', '') || ',')
+      LIKE '%,' || s.id || ',%'
+    WHERE ${wherePaid}
     GROUP BY s.id ORDER BY total DESC
   `).all(...params);
 

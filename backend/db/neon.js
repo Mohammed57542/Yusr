@@ -21,8 +21,42 @@ function toPg(sql) {
   return sql.replace(/\?/g, () => `$${++i}`);
 }
 
+function fixRoundArgs(sql) {
+  const upper = sql.toUpperCase();
+  let out = '';
+  let i = 0;
+  for (;;) {
+    const idx = upper.indexOf('ROUND(', i);
+    if (idx === -1) {
+      out += sql.slice(i);
+      return out;
+    }
+    out += sql.slice(i, idx) + 'ROUND(';
+    const argStart = idx + 6;
+    let depth = 1;
+    let j = argStart;
+    let commaTop = -1;
+    while (j < sql.length) {
+      const ch = sql[j];
+      if (ch === '(') depth++;
+      else if (ch === ')') {
+        depth--;
+        if (depth === 0) break;
+      } else if (ch === ',' && depth === 1 && commaTop === -1) commaTop = j;
+      j++;
+    }
+    if (commaTop === -1) {
+      out += sql.slice(argStart, j);
+    } else {
+      out += sql.slice(argStart, commaTop) + '::numeric' + sql.slice(commaTop, j);
+    }
+    out += ')';
+    i = j + 1;
+  }
+}
+
 function convertSql(sql) {
-  return sql
+  return fixRoundArgs(sql)
     .replace(/strftime\(\s*'%Y-%m'\s*,\s*([^)]+?)\s*\)/gi, 'substr($1, 1, 7)')
     .replace(/datetime\(\s*'now'\s*,\s*'-(\d+)\s+days?'\s*\)/gi, "(NOW() - INTERVAL '$1 days')::text")
     .replace(/datetime\(\s*'now'\s*,\s*'\+(\d+)\s+days?'\s*\)/gi, "(NOW() + INTERVAL '$1 days')::text")
