@@ -3,7 +3,11 @@ const API_URL = import.meta.env.VITE_API_URL || '/api';
 async function request(path, options = {}) {
   let token = localStorage.getItem('yusr_token');
   const refreshToken = localStorage.getItem('yusr_refresh');
-  const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+  const isForm = options.body instanceof FormData;
+  const headers = {
+    ...(isForm ? {} : { 'Content-Type': 'application/json' }),
+    ...(options.headers || {}),
+  };
   if (token) headers.Authorization = `Bearer ${token}`;
 
   let res = await fetch(`${API_URL}${path}`, { ...options, headers });

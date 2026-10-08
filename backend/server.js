@@ -71,7 +71,9 @@ app.use(helmet({
       ...(isProd ? { upgradeInsecureRequests: [] } : {}),
     },
   },
-  crossOriginResourcePolicy: { policy: 'same-origin' },
+  crossOriginResourcePolicy: {
+    policy: process.env.CORS_ORIGINS ? 'cross-origin' : 'same-origin',
+  },
   crossOriginEmbedderPolicy: false,
 }));
 
@@ -84,6 +86,8 @@ app.use(cors({
     callback(new Error('غير مصرح بهموم من CORS'));
   },
   credentials: true,
+  methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 app.use(express.json({ limit: '2mb' }));
 

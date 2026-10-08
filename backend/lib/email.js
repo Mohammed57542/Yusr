@@ -1,11 +1,7 @@
 import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 
 const isProd = process.env.NODE_ENV === 'production';
-
-let resend = null;
-if (isProd && process.env.RESEND_API_KEY) {
-  resend = new Resend(process.env.RESEND_API_KEY);
-}
 
 const BRAND = {
   name: 'يُسر',
@@ -14,7 +10,7 @@ const BRAND = {
   gold: '#f7be67',
   url: process.env.FRONTEND_URL || 'https://yusr-platform.onrender.com',
   phone: '96895123456',
-  email: 'info@yusr.edu.om',
+  email: process.env.CONTACT_EMAIL || 'info@yusr.edu.om',
 };
 
 function wrapTemplate(title, bodyHtml) {
@@ -76,12 +72,8 @@ const templates = {
     subject: `تم تأكيد الدفع — ${BRAND.name}`,
     html: wrapTemplate('تأكيد الدفع', `
       <h2>مرحباً ${name}!</h2>
-      <p style="font-size:18px;color:${BRAND.color};font-weight:bold">تم استلام الدفع بنجاح</p>
-      <div class="note">
-        <strong>الخطة:</strong> ${plan}<br>
-        <strong>المبلغ:</strong> ${amount} ر.ع<br>
-        <strong>الحالة:</strong> مدفوع ✅
-      </div>
+      <p style="color:${BRAND.color};font-size:18px;font-weight:bold">تم استلام الدفع بنجاح</p>
+      <div class="note"><strong>الخطة:</strong> ${plan}<br><strong>المبلغ:</strong> ${amount} ر.ع<br><strong>الحالة:</strong> مدفوع ✅</div>
       <p>تم تفعيل اشتراكك. يمكنك الآن الوصول إلى جميع المحتوى المتاح في خطة ${plan}.</p>
       <a href="${BRAND.url}/dashboard" class="btn">ابدأ التعلم الآن</a>
     `),
@@ -101,7 +93,7 @@ const templates = {
     subject: `تم قبول طلبك — ${BRAND.name}`,
     html: wrapTemplate('قبول طلب المعلم', `
       <h2>أهلاً ${name}!</h2>
-      <p style="font-size:18px;color:${BRAND.color};font-weight:bold">مبروك! تم قبول طلبك كمعلم في ${BRAND.name}</p>
+      <p style="color:${BRAND.color};font-size:18px;font-weight:bold">مبروك! تم قبول طلبك كمعلم في ${BRAND.name}</p>
       <p>يمكنك الآن تسجيل الدخول باستخدام حسابك والبدء في إنشاء المحتوى التعليمي.</p>
       <a href="${BRAND.url}/login" class="btn">تسجيل الدخول</a>
     `),
@@ -109,7 +101,7 @@ const templates = {
 
   teacherRejected: (name, reason) => ({
     subject: `نتيجة طلب المعلم — ${BRAND.name}`,
-    html: wrapTemplate('نتيجة طلب المعلم', `
+    html: wrapTemplate('رفض طلب المعلم', `
       <h2>مرحباً ${name}</h2>
       <p>نأسف لإبلاغك بأنه لم يتم قبول طلبك كمعلم في هذه المرحلة.</p>
       ${reason ? `<div class="note"><strong>السبب:</strong> ${reason}</div>` : ''}
@@ -123,44 +115,119 @@ const templates = {
     html: wrapTemplate('تذكير الاختبار', `
       <h2>مرحباً ${name}</h2>
       <p>لديك اختبار قادم:</p>
-      <div class="note">
-        <strong>الاختبار:</strong> ${examTitle}<br>
-        <strong>التاريخ:</strong> ${date}
-      </div>
+      <div class="note"><strong>الاختبار:</strong> ${examTitle}<br><strong>التاريخ:</strong> ${date}</div>
       <p>تأكد من الاستعداد والتحضير المسبق.</p>
       <a href="${BRAND.url}/exams" class="btn">شاهد الاختبارات</a>
     `),
   }),
 };
 
-const FROM_EMAIL = 'onboarding@resend.dev';
+const fromName = BRAND.name;
+
+function senderEmail() {
+  return (
+    process.env.EMAIL_FROM ||
+    process.env.BREVO_SENDER ||
+    process.env.SMTP_USER ||
+    process.env.RESEND_SENDER ||
+    'onboarding@resend.dev'
+  );
+}
+
+function provider() {
+  if (process.env.EMAIL_PROVIDER) return process.env.EMAIL_PROVIDER.toLowerCase();
+  if (process.env.BREVO_API_KEY) return 'brevo';
+  if (process.env.SMTP_HOST && process.env.SMTP_USER) return 'smtp';
+  if (process.env.RESEND_API_KEY) return 'resend';
+  return 'none';
+}
+
+async function sendViaBrevo({ to, subject, html }) {
+  const key = process.env.BREVO_API_KEY;
+  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: { 'api-key': key, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      sender: { email: senderEmail(), name: fromName },
+      to: [{ email: to }],
+      subject,
+      htmlContent: html,
+    }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.message || `Brevo HTTP ${res.status}`);
+  }
+  return { id: data.messageId || data.message || null };
+}
+
+async function sendViaResend({ to, subject, html }) {
+  const resend = new Resend(process.env.RESEND_API_KEY);
+  const { data, error } = await resend.emails.send({
+    from: `${fromName} <${senderEmail()}>`,
+    to,
+    subject,
+    html,
+  });
+  if (error) throw new Error(error.message);
+  return { id: data?.id || null };
+}
+
+let smtpTransport = null;
+async function sendViaSmtp({ to, subject, html }) {
+  if (!smtpTransport) {
+    const port = Number(process.env.SMTP_PORT || 587);
+    smtpTransport = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port,
+      secure: port === 465,
+      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+      pool: true,
+      maxConnections: 2,
+    });
+    await smtpTransport.verify();
+  }
+  const info = await smtpTransport.sendMail({
+    from: `${fromName} <${senderEmail()}>`,
+    to,
+    subject,
+    html,
+  });
+  return { id: info.messageId || null };
+}
+
+async function deliver(message) {
+  const p = provider();
+  if (p === 'brevo') return sendViaBrevo(message);
+  if (p === 'resend') return sendViaResend(message);
+  if (p === 'smtp') return sendViaSmtp(message);
+  throw new Error(`Unknown EMAIL_PROVIDER: ${p}`);
+}
 
 async function sendEmail(to, templateName, ...args) {
   const template = templates[templateName](...args);
   if (!isProd) {
     console.log(`[EMAIL DEV] To: ${to} | Subject: ${template.subject}`);
-    console.log(`[EMAIL DEV] محاكاة فقط — بيئة تطوير، لم يُرسل أي بريد فعلي`);
+    console.log('[EMAIL DEV] محاكاة فقط — بيئة تطوير، لم يُرسل أي بريد فعلي');
     return { sent: false, simulation: true, message: 'محاكاة — بيئة تطوير' };
   }
-  if (!resend) {
-    console.error('[EMAIL] Resend not configured — no RESEND_API_KEY');
-    return { sent: false, simulation: false, message: 'Resend غير مُعد' };
+
+  const p = provider();
+  if (p === 'none') {
+    console.error('[EMAIL] No provider configured — set BREVO_API_KEY or SMTP_HOST/SMTP_USER/SMTP_PASS');
+    return { sent: false, simulation: false, message: 'لم يتم تهيئة مزوّد البريد' };
   }
+
   try {
-    const { data, error } = await resend.emails.send({
-      from: `${BRAND.name} <${FROM_EMAIL}>`,
+    const result = await deliver({
       to,
       subject: template.subject,
       html: template.html,
     });
-    if (error) {
-      console.error(`[EMAIL] ⛔ Resend rejected ${to}: ${error.message}`);
-      return { sent: false, simulation: false, message: error.message };
-    }
-    console.log(`[EMAIL] ✅ Sent to ${to} (id: ${data?.id}) — ${template.subject}`);
-    return { sent: true, simulation: false, id: data?.id };
+    console.log(`[EMAIL] ✅ Sent via ${p} to ${to} (id: ${result.id}) — ${template.subject}`);
+    return { sent: true, simulation: false, provider: p, id: result.id };
   } catch (err) {
-    console.error(`[EMAIL] Failed to send to ${to}:`, err.message);
+    console.error(`[EMAIL] ⛔ Failed via ${p} to ${to}:`, err.message);
     return { sent: false, simulation: false, message: err.message };
   }
 }
@@ -170,11 +237,29 @@ async function verifySmtpConnection() {
     console.log('[EMAIL] وضع التطوير — تم تخطي فحص البريد');
     return true;
   }
-  if (!resend) {
-    console.error('[EMAIL] ⛔ Resend غير مُعد — البريد لن يُرسل');
+  const p = provider();
+  if (p === 'none') {
+    console.error('[EMAIL] ⛔ No provider — البريد لن يُرسل');
     return false;
   }
-  console.log('[EMAIL] ✅ Resend جاهز — البريد جاهز للإرسال');
+  if (p === 'smtp') {
+    try {
+      const port = Number(process.env.SMTP_PORT || 587);
+      const t = nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port,
+        secure: port === 465,
+        auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+      });
+      await t.verify();
+      console.log(`[EMAIL] ✅ SMTP ${process.env.SMTP_HOST} verified`);
+      return true;
+    } catch (err) {
+      console.error(`[EMAIL] ⛔ SMTP verify failed: ${err.message}`);
+      return false;
+    }
+  }
+  console.log(`[EMAIL] ✅ Provider ready — ${p}`);
   return true;
 }
 
